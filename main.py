@@ -177,16 +177,53 @@ def get_windows_mac(name_patterns=["TAL-J-8"]):
             result.append(window)
     return result
 
-def screen_to_window(x, y, window_box):
-    b = window_box
-    return x - b.xmin, y - b.ymin
 
-def window_to_screen(x, y, window_box):
-    b = window_box
-    return x + b.xmin, y + b.ymin
+# affine transform that can be scaling and translation
+class Affine:
+    def __init__(self, sx, sy, dx, dy):
+        self.sx = sx
+        self.sy = sy
+        self.dx = dx
+        self.dy = dy
 
-def window_to_model(x, y, window_box, model_box):
-    pass
+    def inverse(self):
+        sx_inv = 1.0 / self.sx
+        sy_inv = 1.0 / self.sy
+        return Affine(sx_inv, sy_inv, - sx_inv * self.dx, - sy_inv * self.dy)
+
+    def multiply_right(self, other):
+        sx = sefl.sx * other.sx
+        sy = sefl.sy * other.sy
+        dx = sx * other.dx + self.dx
+        dy = sy * other.dx + self.dy
+        self.sx = sx
+        self.sy = sy
+        self.dx = dx
+        self.dy = dy
+
+    def apply(self, x, y):
+        x_ = self.sx * x + self.dx
+        y_ = self.sy * y + self.dy
+        return (x_, y_)
+
+
+def screen_to_window(window_box):
+    b = window_box
+    return Affine(1.0, 1.0, -b.xmin, -b.ymin)
+
+def window_to_screen(window_box):
+    return screen_to_window(window_box).inverse()
+
+def model_to_window(window_box, model_box):
+    sx = window_box.width / model_box.width
+    sy = window_box.height / model_box.height
+    s = min(sx, sy)
+    excess_x = window_box.width - s * model_box.width
+    excess_y = window_box.height - s * model_box.height
+    return Affine(s, s, excess_x / 2.0, excess_y)
+
+def window_to_model(window_box, model_box):
+    return model_to_window(window_box, model_box).inverse()
 
 def main():
     print('analyzing..', end='')
