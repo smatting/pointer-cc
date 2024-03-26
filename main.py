@@ -85,6 +85,9 @@ class Dispatcher(threading.Thread):
         self.midiin = midiin
         self.queue = queue.Queue()
         self.mouse_controller = mouse_controller
+        self.freewheeling = False
+        self.freewheeling_direction = None
+        self.cc_last = None
 
     def fmt_message(self, message, prefix):
         input = (' '.join([fmt_hex(b) for b in message]))
@@ -96,7 +99,7 @@ class Dispatcher(threading.Thread):
     def __call__(self, event, data=None):
         try:
             message, deltatime = event
-            print(self.fmt_message(message, '<     '))
+            print(self.fmt_message(message, str((self.freewheeling, self.freewheeling_direction))))
 
             # note on(?)
             if message[0] & 0xf0 == 0x90:
@@ -117,6 +120,29 @@ class Dispatcher(threading.Thread):
                 if message[1] == 0x32:
                     y_normed = message[2] / 127.0
                     self.mouse_controller.pan_y(y_normed)
+
+                if message[1] == 0x33:
+                    val = message[2]
+                    if self.cc_last is not None:
+                        delta = val - self.cc_last
+                        print(delta)
+
+                        if self.freewheeling:
+                            if self.freewheeling_direction is None:
+                                self.freewheeling_direction = delta > 0
+                            elif self.freewheeling_direction != (delta > 0):
+                                self.freewheeling = False
+                                self.freewheeling_direction = None
+
+                        if not self.freewheeling:
+                            self.mouse_controller.turn(delta)
+
+                    self.cc_last = val
+
+                # freewheeling button
+                if message[1] == 0x34:
+                    self.freewheeling = True
+                    self.freewheeling_direction = None
 
         except Exception as e:
             traceback.print_exception(e)
@@ -258,6 +284,10 @@ class MouseController:
     def pan_y(self, y_normed):
         self.my = self.model.box.height * y_normed
         self.move_mouse()
+
+    def turn(self, times):
+        # TODO: allow fractional deltas that accumulate
+        mouse.wheel(delta=times)
 
     def move_mouse(self):
         mx, my = self.find_closest_marker(self.mx, self.my)
