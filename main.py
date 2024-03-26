@@ -114,14 +114,17 @@ class Dispatcher(threading.Thread):
 
             # midi cc
             if message[0] & 0xf0 == 0xb0:
-                if message[1] == 0x31:
+                if message[1] == 0x4d:
                     x_normed = message[2] / 127.0
                     self.mouse_controller.pan_x(x_normed)
-                if message[1] == 0x32:
+                if message[1] == 0x4e:
                     y_normed = message[2] / 127.0
+                    invert = True
+                    if invert:
+                        y_normed = 1.0 - y_normed
                     self.mouse_controller.pan_y(y_normed)
 
-                if message[1] == 0x33:
+                if message[1] == 0x4f:
                     val = message[2]
                     if self.cc_last is not None:
                         delta = val - self.cc_last
@@ -140,7 +143,7 @@ class Dispatcher(threading.Thread):
                     self.cc_last = val
 
                 # freewheeling button
-                if message[1] == 0x34:
+                if message[1] == 0x50:
                     self.freewheeling = True
                     self.freewheeling_direction = None
 
