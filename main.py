@@ -1,3 +1,4 @@
+import Quartz
 from PIL import Image
 
 import time
@@ -22,7 +23,18 @@ class Box:
         y = self.ymin + (self.ymax - self.ymin) // 2
         return (x, y)
 
-def find_boxes(im, marker_color=(255, 0, 255, 255)):
+    @property
+    def width(self):
+        return self.xmax - self.xmin
+
+    @property
+    def height(self):
+        return self.ymax - self.ymin
+
+def make_box(x, y, width, height):
+    return Box(x, x + width, y, y + height)
+
+def find_markings(im, marker_color):
     boxes = []
     spans_last = {}
     for y in range(0, im.height):
@@ -49,12 +61,16 @@ def find_boxes(im, marker_color=(255, 0, 255, 255)):
         spans_last = spans
     return boxes
 
-def analyze(filename):
+class Model:
+    def __init__(self, box, markings):
+        self.box = box
+        self.markings = markings
+
+def analyze(filename, marker_color=(255, 0, 255, 255)):
     im = Image.open(filename)
-    points = [b.center() for b in find_boxes(im)]
-    return im.width, im.height, points
-
-
+    markings = [b.center() for b in find_markings(im, marker_color)]
+    b = make_box(0, 0, im.width, im.height) 
+    return Model(b, markings)
 
 def fmt_hex(i):
     s = hex(i)[2:].upper()
@@ -81,6 +97,9 @@ class Dispatcher(threading.Thread):
 
             # note on(?)
             if message[0] & 0xf0 == 0x90:
+                if message[1] == 0x3c:
+                    print('aha!')
+                    self.queue.put(42)
                 pass
 
             # note off(?)
@@ -98,13 +117,14 @@ class Dispatcher(threading.Thread):
     def run(self):
         self.midiin.set_callback(self)
 
-        while True:
-            time.sleep(1)
-            # item = self.queue.get()
-            #
-            # if item is None:
-            #     print('message empty')
-            #     continue
+        running = True
+        while running:
+            item = self.queue.get()
+
+            print('got item!')
+            sys.stdout.flush()
+            running = False
+
             #
             # dst, message = item
             #
@@ -116,7 +136,13 @@ class Dispatcher(threading.Thread):
             #     print(self.fmt_message(message, f'>{dst.ljust(4)} '))
             # else:
             #     raise ValueError(dst)
+        print('done?')
 
+
+class Window:
+    def __init__(self, title, box):
+        self.title = title
+        self.box = box
 
 def main_mapper():
     NOVA_PORT = 'Launch Control XL'
@@ -124,14 +150,48 @@ def main_mapper():
 
     dispatcher = Dispatcher(midiin)
     dispatcher.start()
-    while True:
-        time.sleep(1)
+    dispatcher.join()
 
 def main_analyze():
     return analyze("instruments/tal-jupiter.png")
+
+def matches_any(window, name_patterns):
+    name = window.get(Quartz.kCGWindowName)
+    if name is None:
+        return False
+    else:
+        for pattern in name_patterns:
+            if re.search(pattern, name):
+                return True
+        return False
     
+def get_windows_mac(name_patterns=["TAL-J-8"]):
+    windows = Quartz.CGWindowListCopyWindowInfo(0, Quartz.kCGNullWindowID)
+    result = []
+    for w in filter(lambda w: matches_any(w, name_patterns), windows):
+        bounds = w.get(Quartz.kCGWindowBounds)
+        if bounds:
+            b = make_box(int(bounds['X']), int(bounds['Y']), int(bounds['Width']), int(bounds['Height']))
+            title = w[Quartz.kCGWindowName]
+            window = Window(title, b)
+            result.append(window)
+    return result
+
+def screen_to_window(x, y, window_box):
+    b = window_box
+    return x - b.xmin, y - b.ymin
+
+def window_to_screen(x, y, window_box):
+    b = window_box
+    return x + b.xmin, y + b.ymin
+
+def window_to_model(x, y, window_box, model_box):
+    pass
 
 def main():
+    print('analyzing..', end='')
+    model = main_analyze()
+    print('done.')
     main_mapper()
 
 if __name__ == '__main__':
