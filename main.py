@@ -4,6 +4,7 @@ from PIL import Image
 import time
 import rtmidi
 import traceback
+import mouse
 from rtmidi.midiutil import open_midiport
 import threading
 import queue
@@ -78,10 +79,11 @@ def fmt_hex(i):
     return prefix + hex(i)[2:].upper()
 
 class Dispatcher(threading.Thread):
-    def __init__(self, midiin):
+    def __init__(self, midiin, mouse_controller):
         super(Dispatcher, self).__init__()
         self.midiin = midiin
         self.queue = queue.Queue()
+        self.mouse_controller = mouse_controller
 
     def fmt_message(self, message, prefix):
         input = (' '.join([fmt_hex(b) for b in message]))
@@ -108,7 +110,12 @@ class Dispatcher(threading.Thread):
 
             # midi cc
             if message[0] & 0xf0 == 0xb0:
-                print("midi_cc")
+                if message[1] == 0x31:
+                    x_normed = message[2] / 127.0
+                    self.mouse_controller.pan_x(x_normed)
+                if message[1] == 0x32:
+                    y_normed = message[2] / 127.0
+                    self.mouse_controller.pan_y(y_normed)
 
         except Exception as e:
             traceback.print_exception(e)
@@ -144,11 +151,15 @@ class Window:
         self.title = title
         self.box = box
 
-def main_mapper():
+def main():
+    print('analyzing..', end='')
+    model = main_analyze()
+    print('done.')
+    window = get_windows_mac()[0]
     NOVA_PORT = 'Launch Control XL'
     midiin, port = open_midiport(NOVA_PORT, "input")
-
-    dispatcher = Dispatcher(midiin)
+    mouse_controller = MouseController(window, model)
+    dispatcher = Dispatcher(midiin, mouse_controller)
     dispatcher.start()
     dispatcher.join()
 
@@ -192,8 +203,8 @@ class Affine:
         return Affine(sx_inv, sy_inv, - sx_inv * self.dx, - sy_inv * self.dy)
 
     def multiply_right(self, other):
-        sx = sefl.sx * other.sx
-        sy = sefl.sy * other.sy
+        sx = self.sx * other.sx
+        sy = self.sy * other.sy
         dx = sx * other.dx + self.dx
         dy = sy * other.dx + self.dy
         self.sx = sx
@@ -205,7 +216,6 @@ class Affine:
         x_ = self.sx * x + self.dx
         y_ = self.sy * y + self.dy
         return (x_, y_)
-
 
 def screen_to_window(window_box):
     b = window_box
@@ -220,16 +230,38 @@ def model_to_window(window_box, model_box):
     s = min(sx, sy)
     excess_x = window_box.width - s * model_box.width
     excess_y = window_box.height - s * model_box.height
-    return Affine(s, s, excess_x / 2.0, excess_y)
+    return Affine(s, s, excess_x / 2.0, - excess_y)
 
 def window_to_model(window_box, model_box):
     return model_to_window(window_box, model_box).inverse()
 
-def main():
-    print('analyzing..', end='')
-    model = main_analyze()
-    print('done.')
-    main_mapper()
+class MouseController:
+    def __init__(self, window, model):
+        self.window = window
+        self.model = model
+
+        t = window_to_model(window.box, model.box)
+        s2w = screen_to_window(window.box)
+        t.multiply_right(s2w)
+
+        self.screen_to_model = t
+        self.model_to_screen = self.screen_to_model.inverse()
+
+        self.mx = 0.0
+        self.my = 0.0
+
+    def pan_x(self, x_normed):
+        self.mx = self.model.box.width * x_normed
+        self.move_mouse()
+
+    def pan_y(self, y_normed):
+        self.my = self.model.box.height * y_normed
+        self.move_mouse()
+
+    def move_mouse(self):
+        x, y = self.model_to_screen.apply(self.mx, self.my)
+        mouse.move(int(x), int(y))
+
 
 if __name__ == '__main__':
     main()
