@@ -3,6 +3,7 @@ from PIL import Image
 
 import time
 import rtmidi
+import math
 import traceback
 import mouse
 from rtmidi.midiutil import open_midiport
@@ -206,7 +207,7 @@ class Affine:
         sx = self.sx * other.sx
         sy = self.sy * other.sy
         dx = sx * other.dx + self.dx
-        dy = sy * other.dx + self.dy
+        dy = sy * other.dy + self.dy
         self.sx = sx
         self.sy = sy
         self.dx = dx
@@ -230,7 +231,7 @@ def model_to_window(window_box, model_box):
     s = min(sx, sy)
     excess_x = window_box.width - s * model_box.width
     excess_y = window_box.height - s * model_box.height
-    return Affine(s, s, excess_x / 2.0, - excess_y)
+    return Affine(s, s, excess_x / 2.0, excess_y)
 
 def window_to_model(window_box, model_box):
     return model_to_window(window_box, model_box).inverse()
@@ -259,9 +260,21 @@ class MouseController:
         self.move_mouse()
 
     def move_mouse(self):
-        x, y = self.model_to_screen.apply(self.mx, self.my)
+        mx, my = self.find_closest_marker(self.mx, self.my)
+        # mx, my = self.mx, self.my
+
+        x, y = self.model_to_screen.apply(mx, my)
         mouse.move(int(x), int(y))
 
+    def find_closest_marker(self, mx, my):
+        d_best = math.inf
+        i_best = 0
+        for i, (x, y) in enumerate(self.model.markings):
+            d = math.pow(x - mx, 2.0) + math.pow(y - my, 2.0)
+            if d < d_best:
+                i_best = i
+                d_best = d
+        return self.model.markings[i_best]
 
 if __name__ == '__main__':
     main()
