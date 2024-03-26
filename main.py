@@ -88,6 +88,7 @@ class Dispatcher(threading.Thread):
         self.freewheeling = False
         self.freewheeling_direction = None
         self.cc_last = None
+        self.current_controller = None
 
     def fmt_message(self, message, prefix):
         input = (' '.join([fmt_hex(b) for b in message]))
@@ -99,7 +100,7 @@ class Dispatcher(threading.Thread):
     def __call__(self, event, data=None):
         try:
             message, deltatime = event
-            print(self.fmt_message(message, str((self.freewheeling, self.freewheeling_direction))))
+            print(self.fmt_message(message, str(self.current_controller) + " "))
 
             # note on(?)
             if message[0] & 0xf0 == 0x90:
@@ -116,13 +117,14 @@ class Dispatcher(threading.Thread):
             if message[0] & 0xf0 == 0xb0:
                 if message[1] == 0x4d:
                     x_normed = message[2] / 127.0
-                    self.mouse_controller.pan_x(x_normed)
+                    self.current_controller = self.mouse_controller.pan_x(x_normed)
+
                 if message[1] == 0x4e:
                     y_normed = message[2] / 127.0
                     invert = True
                     if invert:
                         y_normed = 1.0 - y_normed
-                    self.mouse_controller.pan_y(y_normed)
+                    self.current_controller = self.mouse_controller.pan_y(y_normed)
 
                 if message[1] == 0x4f:
                     val = message[2]
@@ -138,7 +140,10 @@ class Dispatcher(threading.Thread):
                                 self.freewheeling_direction = None
 
                         if not self.freewheeling:
-                            self.mouse_controller.turn(delta)
+                            speed = 1
+                            if self.current_controller == 10:
+                                speed = 10
+                            self.mouse_controller.turn(delta * speed)
 
                     self.cc_last = val
 
@@ -282,22 +287,23 @@ class MouseController:
 
     def pan_x(self, x_normed):
         self.mx = self.model.box.width * x_normed
-        self.move_mouse()
+        return self.move_mouse()
 
     def pan_y(self, y_normed):
         self.my = self.model.box.height * y_normed
-        self.move_mouse()
+        return self.move_mouse()
 
     def turn(self, times):
         # TODO: allow fractional deltas that accumulate
         mouse.wheel(delta=times)
 
     def move_mouse(self):
-        mx, my = self.find_closest_marker(self.mx, self.my)
+        i, (mx, my) = self.find_closest_marker(self.mx, self.my)
         # mx, my = self.mx, self.my
 
         x, y = self.model_to_screen.apply(mx, my)
         mouse.move(int(x), int(y))
+        return i
 
     def find_closest_marker(self, mx, my):
         d_best = math.inf
@@ -307,7 +313,7 @@ class MouseController:
             if d < d_best:
                 i_best = i
                 d_best = d
-        return self.model.markings[i_best]
+        return i_best, self.model.markings[i_best]
 
 if __name__ == '__main__':
     main()
