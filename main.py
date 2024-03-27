@@ -85,10 +85,6 @@ class Dispatcher(threading.Thread):
         self.midiin = midiin
         self.queue = queue.Queue()
         self.mouse_controller = mouse_controller
-        self.freewheeling = False
-        self.freewheeling_direction = None
-        self.cc_last = None
-        self.current_controller = None
 
     def fmt_message(self, message, prefix):
         input = (' '.join([fmt_hex(b) for b in message]))
@@ -100,7 +96,7 @@ class Dispatcher(threading.Thread):
     def __call__(self, event, data=None):
         try:
             message, deltatime = event
-            print(self.fmt_message(message, str(self.current_controller) + " "))
+            print(self.fmt_message(message, str(self.mouse_controller.current_controller) + " "))
 
             # note on(?)
             if message[0] & 0xf0 == 0x90:
@@ -117,40 +113,19 @@ class Dispatcher(threading.Thread):
             if message[0] & 0xf0 == 0xb0:
                 if message[1] == 0x4d:
                     x_normed = message[2] / 127.0
-                    self.current_controller = self.mouse_controller.pan_x(x_normed)
+                    self.mouse_controller.pan_x(x_normed)
 
                 if message[1] == 0x4e:
                     y_normed = message[2] / 127.0
-                    invert = True
-                    if invert:
-                        y_normed = 1.0 - y_normed
-                    self.current_controller = self.mouse_controller.pan_y(y_normed)
+                    self.mouse_controller.pan_y(y_normed)
 
                 if message[1] == 0x4f:
-                    val = message[2]
-                    if self.cc_last is not None:
-                        delta = val - self.cc_last
-                        print(delta)
-
-                        if self.freewheeling:
-                            if self.freewheeling_direction is None:
-                                self.freewheeling_direction = delta > 0
-                            elif self.freewheeling_direction != (delta > 0):
-                                self.freewheeling = False
-                                self.freewheeling_direction = None
-
-                        if not self.freewheeling:
-                            speed = 1
-                            if self.current_controller == 10:
-                                speed = 10
-                            self.mouse_controller.turn(delta * speed)
-
-                    self.cc_last = val
+                    cc_value = message[2]
+                    self.mouse_controller.turn(cc_value)
 
                 # freewheeling button
                 if message[1] == 0x50:
-                    self.freewheeling = True
-                    self.freewheeling_direction = None
+                    self.mouse_controller.freewheel()
 
         except Exception as e:
             traceback.print_exception(e)
@@ -285,17 +260,48 @@ class MouseController:
         self.mx = 0.0
         self.my = 0.0
 
+        self.freewheeling = False
+        self.freewheeling_direction = None
+        self.cc_last = None
+        self.current_controller = None
+
     def pan_x(self, x_normed):
         self.mx = self.model.box.width * x_normed
-        return self.move_mouse()
+        self.current_controller = self.move_mouse()
+
 
     def pan_y(self, y_normed):
         self.my = self.model.box.height * y_normed
-        return self.move_mouse()
+        invert = True
+        if invert:
+            y_normed = 1.0 - y_normed
+        self.current_controller = self.move_mouse()
 
-    def turn(self, times):
-        # TODO: allow fractional deltas that accumulate
-        mouse.wheel(delta=times)
+    def turn(self, cc_value):
+        val = cc_value
+
+        if self.cc_last is not None:
+            delta = val - self.cc_last
+            print(delta)
+
+            if self.freewheeling:
+                if self.freewheeling_direction is None:
+                    self.freewheeling_direction = delta > 0
+                elif self.freewheeling_direction != (delta > 0):
+                    self.freewheeling = False
+                    self.freewheeling_direction = None
+
+            if not self.freewheeling:
+                speed = 1
+                if self.current_controller == 10:
+                    speed = 10
+                mouse.wheel(delta=delta * speed)
+        self.cc_last = val
+
+    def freewheel(self):
+        self.freewheeling = True
+        self.freewheeling_direction = None
+
 
     def move_mouse(self):
         i, (mx, my) = self.find_closest_marker(self.mx, self.my)
