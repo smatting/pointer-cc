@@ -300,7 +300,7 @@ class MouseController:
                     self.freewheeling_direction = None
 
             if not self.freewheeling:
-                speed = 1.5
+                speed = 1.46
                 if self.current_controller == 10:
                     speed = 10
                 self.last_controller_accum += delta * speed
