@@ -265,6 +265,9 @@ class MouseController:
         self.cc_last = None
         self.current_controller = None
 
+        self.last_controller_turned = None
+        self.last_controller_accum = 0.0
+
     def pan_x(self, x_normed):
         self.mx = self.model.box.width * x_normed
         self.current_controller = self.move_mouse()
@@ -280,9 +283,14 @@ class MouseController:
     def turn(self, cc_value):
         val = cc_value
 
+        if self.last_controller_turned is not None:
+            if self.current_controller is not None:
+                if self.last_controller_turned != self.current_controller:
+                    self.last_controller_accum = 0.0
+
         if self.cc_last is not None:
             delta = val - self.cc_last
-            print(delta)
+            # print(delta)
 
             if self.freewheeling:
                 if self.freewheeling_direction is None:
@@ -292,10 +300,17 @@ class MouseController:
                     self.freewheeling_direction = None
 
             if not self.freewheeling:
-                speed = 1
+                speed = 1.5
                 if self.current_controller == 10:
                     speed = 10
-                mouse.wheel(delta=delta * speed)
+                self.last_controller_accum += delta * speed
+                k_whole = int(self.last_controller_accum)
+                self.last_controller_accum -= k_whole
+                mouse.wheel(k_whole)
+
+        if self.last_controller_turned is None:
+            self.last_controller_turned = self.current_controller
+
         self.cc_last = val
 
     def freewheel(self):
