@@ -199,8 +199,6 @@ class Dispatcher(threading.Thread):
     
             controller = self.get_active_controller()
 
-            # msg_display = self.fmt_message(message, str(self.mouse_controller.current_controller) + " ")
-
             midi_msg_text = self.fmt_message(message, "")
 
             cc_text = ""
@@ -222,30 +220,25 @@ class Dispatcher(threading.Thread):
                 pass
 
             # midi cc
-            if message[0] & 0xf0 == 0xb0:
-                if message[1] == 0x4d:
-                    x_normed = message[2] / 127.0
-                    if controller:
+            if controller:
+                if message[0] & 0xf0 == 0xb0:
+                    if message[1] == 0x4d:
+                        x_normed = message[2] / 127.0
                         controller.pan_x(x_normed)
 
-                if message[1] == 0x4e:
-                    y_normed = message[2] / 127.0
-                    if controller:
+                    if message[1] == 0x4e:
+                        y_normed = message[2] / 127.0
                         controller.pan_y(y_normed)
 
-                if message[1] == 0x4f:
-                    cc_value = message[2]
-                    if controller:
+                    if message[1] == 0x4f:
+                        cc_value = message[2]
                         controller.turn(cc_value)
 
-                # freewheeling button
-                if message[1] == 0x50:
-                    if controller:
+                    if message[1] == 0x50:
                         controller.freewheel()
 
         except Exception as e:
             traceback.print_exception(e)
-            # print('Exception in handler: ' + repr(e))
 
     def run(self):
         self.midiin.set_callback(self)
@@ -546,27 +539,24 @@ def main_2():
 def main():
     initialize_config()
 
-    inst = Instrument.load(userfile("inst-tal-j-8.yaml"))
-    instruments = {inst.pattern: inst}
-
     q = queue.Queue()
 
-    app = wx.App(False)
+    app = wx.App(True)
 
     midiin = rtmidi.MidiIn()
     ports = midiin.get_ports()
 
     frame = MainWindow(None, "pointer-cc", q, ports, midiin)
-    print('main')
+
+    inst = Instrument.load(userfile("inst-tal-j-8.yaml"))
+    instruments = {inst.pattern: inst}
 
     polling = WindowPolling(q, [inst.pattern])
     polling.start()
 
-    # window = get_windows_mac()[0]
-
     dispatcher = Dispatcher(midiin, q, frame, instruments)
     dispatcher.start()
-    #
+
     app.MainLoop()
 
     polling.event.set()
