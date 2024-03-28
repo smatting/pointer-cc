@@ -153,7 +153,7 @@ def fmt_hex(i):
     return prefix + hex(i)[2:].upper()
 
 class Dispatcher(threading.Thread):
-    def __init__(self, midiin, queue, frame, instruments):
+    def __init__(self, midiin, queue, frame, instruments, config):
         super(Dispatcher, self).__init__()
         self.midiin = midiin
         self.queue = queue
@@ -161,6 +161,7 @@ class Dispatcher(threading.Thread):
         self.midi_channel = None
         self.instruments = instruments
         self.controllers = {}
+        self.config = config
 
     def fmt_message(self, message, prefix):
         input = (' '.join([fmt_hex(b) for b in message]))
@@ -185,7 +186,6 @@ class Dispatcher(threading.Thread):
                     xmin = c.window.box.xmin
                     cbest = c
             return cbest
-
 
     def __call__(self, event, data=None):
         try:
@@ -219,22 +219,22 @@ class Dispatcher(threading.Thread):
             if message[0] & 0xf0 == 0x80:
                 pass
 
-            # midi cc
             if controller:
+                # midi cc
                 if message[0] & 0xf0 == 0xb0:
-                    if message[1] == 0x4d:
+                    if message[1] == self.config.pan_x_cc:
                         x_normed = message[2] / 127.0
                         controller.pan_x(x_normed)
 
-                    if message[1] == 0x4e:
+                    if message[1] == self.config.pan_y_cc:
                         y_normed = message[2] / 127.0
                         controller.pan_y(y_normed)
 
-                    if message[1] == 0x4f:
+                    if message[1] == self.config.control_cc:
                         cc_value = message[2]
                         controller.turn(cc_value)
 
-                    if message[1] == 0x50:
+                    if message[1] == self.config.freewheel_cc:
                         controller.freewheel()
 
         except Exception as e:
@@ -420,17 +420,17 @@ class MainWindow(wx.Frame):
         self.channel_dropdown = wx.ComboBox(self, id=wx.ID_ANY, choices=channel_choices, style=wx.CB_READONLY)
         self.Bind(wx.EVT_COMBOBOX, self.handle_channel_choice, self.channel_dropdown)
 
+        self.cc_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
 
         self.midi_msg_text = wx.StaticText(self, label="<no MIDI received yet>", style=wx.ALIGN_CENTER)
-        self.cc_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.port_dropdown)
         self.sizer.Add(self.connect_button)
         self.sizer.Add(self.channel_dropdown)
         self.sizer.Add(self.button)
-        self.sizer.Add(self.midi_msg_text)
         self.sizer.Add(self.cc_text)
+        self.sizer.Add(self.midi_msg_text)
 
         self.SetSizer(self.sizer)
         self.SetAutoLayout(True)
@@ -532,16 +532,35 @@ class WindowPolling(threading.Thread):
             if self.event.is_set():
                 running = False
 
+class Config:
+    def __init__(self, pan_x_cc, pan_y_cc, control_cc, freewheel_cc):
+        self.pan_x_cc = pan_x_cc
+        self.pan_y_cc = pan_y_cc
+        self.control_cc = control_cc
+        self.freewheel_cc = freewheel_cc
+
+    @staticmethod
+    def load(path):
+        with open(path, 'r') as f:
+            d = yaml.safe_load(f.read())
+        pan_x_cc = d['pan_x']['cc']
+        pan_y_cc = d['pan_y']['cc']
+        control_cc = d['control']['cc']
+        freewheel_cc = d['freewheel']['cc']
+        return Config(pan_x_cc, pan_y_cc, control_cc, freewheel_cc)
+
 def main_2():
     d = main_analyze()
     print(yaml.dump(d, sort_keys=False))
 
 def main():
     initialize_config()
+    config = Config.load(userfile('config.yaml'))
 
     q = queue.Queue()
 
     app = wx.App(True)
+
 
     midiin = rtmidi.MidiIn()
     ports = midiin.get_ports()
@@ -554,7 +573,7 @@ def main():
     polling = WindowPolling(q, [inst.pattern])
     polling.start()
 
-    dispatcher = Dispatcher(midiin, q, frame, instruments)
+    dispatcher = Dispatcher(midiin, q, frame, instruments, config)
     dispatcher.start()
 
     app.MainLoop()
