@@ -15,9 +15,12 @@ import copy
 import sys
 import re
 import appdirs
+from enum import Enum
 
 app_name = "pointer-cc"
 app_author = "smatting"
+
+Command = Enum('Command', ['QUIT', 'CHANGE_MIDI_CHANNEL'])
 
 def datadir():
     return appdirs.user_data_dir(app_name, app_author)
@@ -148,6 +151,7 @@ class Dispatcher(threading.Thread):
         self.queue = queue
         self.frame = frame
         self.mouse_controller = mouse_controller
+        self.midi_channel = None
 
     def fmt_message(self, message, prefix):
         input = (' '.join([fmt_hex(b) for b in message]))
@@ -159,6 +163,13 @@ class Dispatcher(threading.Thread):
     def __call__(self, event, data=None):
         try:
             message, deltatime = event
+
+            ch = message[0] & 0x0f
+            ignore = False
+            if self.midi_channel is not None:
+                if ch != self.midi_channel:
+                    return
+
             # msg_display = self.fmt_message(message, str(self.mouse_controller.current_controller) + " ")
             midi_msg_text = self.fmt_message(message, "")
             if self.mouse_controller.current_controller is None:
@@ -208,28 +219,17 @@ class Dispatcher(threading.Thread):
 
     def run(self):
         self.midiin.set_callback(self)
-
         running = True
         while running:
             item = self.queue.get()
-
-            print('got item!')
-            sys.stdout.flush()
-            running = False
-
-            #
-            # dst, message = item
-            #
-            # sys.stdout.flush()
-            # if dst == 'nova':
-            #     self.nova_midiout.send_message(message)
-            # elif dst == 'out':
-            #     self.mapped_midiout.send_message(message)
-            #     print(self.fmt_message(message, f'>{dst.ljust(4)} '))
-            # else:
-            #     raise ValueError(dst)
-        print('done?')
-
+            cmd = item[0]
+            if cmd == Command.QUIT:
+                running = False
+            elif cmd == Command.CHANGE_MIDI_CHANNEL:
+                if item[1] == 0:
+                    self.midi_channel = None
+                else:
+                    self.midi_channel = item[1] - 1
 
 class Window:
     def __init__(self, title, box):
@@ -398,7 +398,7 @@ class MainWindow(wx.Frame):
         self.queue = q
         self.midiin = midiin
 
-        self.button = wx.Button(self, label="My simple app.")
+        self.button = wx.Button(self, label="Quit")
         self.Bind(
             wx.EVT_BUTTON, self.handle_button_click, self.button
         )
@@ -411,12 +411,18 @@ class MainWindow(wx.Frame):
             wx.EVT_BUTTON, self.handle_connect_click, self.connect_button
         )
 
+        channel_choices = ["All"] + [f"Ch. {i}" for i in range(1, 17)]
+        self.channel_dropdown = wx.ComboBox(self, id=wx.ID_ANY, choices=channel_choices, style=wx.CB_READONLY)
+        self.Bind(wx.EVT_COMBOBOX, self.handle_channel_choice, self.channel_dropdown)
+
+
         self.midi_msg_text = wx.StaticText(self, label="<no MIDI received yet>", style=wx.ALIGN_CENTER)
         self.cc_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.port_dropdown)
         self.sizer.Add(self.connect_button)
+        self.sizer.Add(self.channel_dropdown)
         self.sizer.Add(self.button)
         self.sizer.Add(self.midi_msg_text)
         self.sizer.Add(self.cc_text)
@@ -430,7 +436,7 @@ class MainWindow(wx.Frame):
         self.cc_text.SetLabel(cc_text)
 
     def handle_button_click(self, event):
-        self.queue.put(42)
+        self.queue.put((Command.QUIT, None))
         self.Close()
         wx.GetApp().ExitMainLoop()
 
@@ -442,6 +448,10 @@ class MainWindow(wx.Frame):
                 self.midiin.open_port(i)
             except ValueError:
                 pass
+
+    def handle_channel_choice(self, event):
+        i = event.GetInt()
+        self.queue.put((Command.CHANGE_MIDI_CHANNEL, i))
 
 
 def main_2():
