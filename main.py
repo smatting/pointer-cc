@@ -80,11 +80,11 @@ def find_markings(im, marker_color):
 
 
 class Controller:
-    def __init__(self, i, x, y, speed):
+    def __init__(self, i, x, y, speed_multiplier=None):
         self.i = i
         self.x = x
         self.y = y
-        self.speed = speed
+        self.speed_multiplier = speed_multiplier
 
 class Instrument:
     def __init__(self, box, controllers):
@@ -99,7 +99,12 @@ class Instrument:
         box = Box(0, dim["width"], 0, dim["height"])
         controllers = []
         for g in d["controllers"]:
-            c = Controller(int(g['i']), int(g["x"]), int(g["y"]), 100)
+            mspeed = g.get('speed')
+            if mspeed is not None:
+                speed = int(mspeed)
+            else:
+                speed = None
+            c = Controller(int(g['i']), int(g["x"]), int(g["y"]), speed)
             controllers.append(c)
         return Instrument(box, controllers)
 
@@ -154,9 +159,19 @@ class Dispatcher(threading.Thread):
     def __call__(self, event, data=None):
         try:
             message, deltatime = event
-            msg_display = self.fmt_message(message, str(self.mouse_controller.current_controller) + " ")
+            # msg_display = self.fmt_message(message, str(self.mouse_controller.current_controller) + " ")
+            midi_msg_text = self.fmt_message(message, "")
+            if self.mouse_controller.current_controller is None:
+                cc_text = ""
+            else:
+                ms = self.mouse_controller.current_controller.speed_multiplier
+                if ms is not None:
+                    s = f', speed: {ms}'
+                else:
+                    s = ''
+                cc_text = str(f"i: {self.mouse_controller.current_controller.i}" + s)
 
-            wx.CallAfter(self.frame.setMIDImsg, msg_display)
+            wx.CallAfter(self.frame.update_view, midi_msg_text, cc_text)
 
             # note on(?)
             if message[0] & 0xf0 == 0x90:
@@ -349,8 +364,12 @@ class MouseController:
 
             if not self.freewheeling:
                 speed = 1.46
-                if self.current_controller == 10:
-                    speed = 10
+
+                if self.current_controller is not None:
+                    k = self.current_controller.speed_multiplier
+                    if k is not None:
+                        speed *= k / 100.0
+
                 self.last_controller_accum += delta * speed
                 k_whole = int(self.last_controller_accum)
                 self.last_controller_accum -= k_whole
@@ -383,18 +402,21 @@ class MainWindow(wx.Frame):
             wx.EVT_BUTTON, self.handle_button_click, self.button
         )
 
-        self.text = wx.StaticText(self, label="Hello, World!", style=wx.ALIGN_CENTER)
+        self.midi_msg_text = wx.StaticText(self, label="<no MIDI received yet>", style=wx.ALIGN_CENTER)
+        self.cc_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.button)
-        self.sizer.Add(self.text)
+        self.sizer.Add(self.midi_msg_text)
+        self.sizer.Add(self.cc_text)
 
         self.SetSizer(self.sizer)
         self.SetAutoLayout(True)
         self.Show()
 
-    def setMIDImsg(self, msg):
-        self.text.SetLabel(msg)
+    def update_view(self, midi_msg, cc_text):
+        self.midi_msg_text.SetLabel(midi_msg)
+        self.cc_text.SetLabel(cc_text)
 
     def handle_button_click(self, event):
         self.queue.put(42)
@@ -425,7 +447,6 @@ def main():
     dispatcher.start()
     #
     app.MainLoop()
-    print('main 366')
 
     dispatcher.join()
 
