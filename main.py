@@ -1,6 +1,6 @@
 import Quartz
 from PIL import Image
-
+import wx
 import time
 import rtmidi
 import math
@@ -80,10 +80,11 @@ def fmt_hex(i):
     return prefix + hex(i)[2:].upper()
 
 class Dispatcher(threading.Thread):
-    def __init__(self, midiin, mouse_controller):
+    def __init__(self, midiin, mouse_controller, queue, frame):
         super(Dispatcher, self).__init__()
         self.midiin = midiin
-        self.queue = queue.Queue()
+        self.queue = queue
+        self.frame = frame
         self.mouse_controller = mouse_controller
 
     def fmt_message(self, message, prefix):
@@ -96,7 +97,9 @@ class Dispatcher(threading.Thread):
     def __call__(self, event, data=None):
         try:
             message, deltatime = event
-            print(self.fmt_message(message, str(self.mouse_controller.current_controller) + " "))
+            msg_display = self.fmt_message(message, str(self.mouse_controller.current_controller) + " ")
+
+            wx.CallAfter(self.frame.setMIDImsg, msg_display)
 
             # note on(?)
             if message[0] & 0xf0 == 0x90:
@@ -160,18 +163,6 @@ class Window:
     def __init__(self, title, box):
         self.title = title
         self.box = box
-
-def main():
-    print('analyzing..', end='')
-    model = main_analyze()
-    print('done.')
-    window = get_windows_mac()[0]
-    NOVA_PORT = 'Launch Control XL'
-    midiin, port = open_midiport(NOVA_PORT, "input")
-    mouse_controller = MouseController(window, model)
-    dispatcher = Dispatcher(midiin, mouse_controller)
-    dispatcher.start()
-    dispatcher.join()
 
 def main_analyze():
     return analyze("instruments/tal-jupiter.png")
@@ -274,10 +265,10 @@ class MouseController:
 
 
     def pan_y(self, y_normed):
-        self.my = self.model.box.height * y_normed
         invert = True
         if invert:
             y_normed = 1.0 - y_normed
+        self.my = self.model.box.height * y_normed
         self.current_controller = self.move_mouse()
 
     def turn(self, cc_value):
@@ -336,32 +327,58 @@ class MouseController:
                 d_best = d
         return i_best, self.model.markings[i_best]
 
+
+class MainWindow(wx.Frame):
+    def __init__(self, parent, title, q):
+        wx.Frame.__init__(self, parent, title=title, size=(200, -1))
+        self.queue = q
+
+        self.button = wx.Button(self, label="My simple app.")
+        self.Bind(
+            wx.EVT_BUTTON, self.handle_button_click, self.button
+        )
+
+        self.text = wx.StaticText(self, label="Hello, World!", style=wx.ALIGN_CENTER)
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(self.button)
+        self.sizer.Add(self.text)
+
+        self.SetSizer(self.sizer)
+        self.SetAutoLayout(True)
+        self.Show()
+
+    def setMIDImsg(self, msg):
+        self.text.SetLabel(msg)
+
+    def handle_button_click(self, event):
+        self.queue.put(42)
+        self.Close()
+        wx.GetApp().ExitMainLoop()
+
+
+
+def main():
+    q = queue.Queue()
+
+    app = wx.App(False)
+    frame = MainWindow(None, "Hello World", q)
+
+    print('analyzing..', end='')
+    model = main_analyze()
+    print('done.')
+
+    window = get_windows_mac()[0]
+    NOVA_PORT = 'Launch Control XL'
+    midiin, port = open_midiport(NOVA_PORT, "input")
+    mouse_controller = MouseController(window, model)
+    dispatcher = Dispatcher(midiin, mouse_controller, q, frame)
+    dispatcher.start()
+    #
+    app.MainLoop()
+    print('main 366')
+
+    dispatcher.join()
+
 if __name__ == '__main__':
     main()
-
-# import wx
-#
-#
-# class MainWindow(wx.Frame):
-#     def __init__(self, parent, title):
-#         wx.Frame.__init__(self, parent, title=title, size=(200, -1))
-#
-#         self.button = wx.Button(self, label="My simple app.")
-#         self.Bind(
-#             wx.EVT_BUTTON, self.handle_button_click, self.button
-#         )
-#
-#         self.sizer = wx.BoxSizer(wx.VERTICAL)
-#         self.sizer.Add(self.button)
-#
-#         self.SetSizer(self.sizer)
-#         self.SetAutoLayout(True)
-#         self.Show()
-#
-#     def handle_button_click(self, event):
-#         self.Close()
-#
-#
-# app = wx.App(False)
-# w = MainWindow(None, "Hello World")
-# app.MainLoop()
