@@ -3,6 +3,8 @@ from PIL import Image
 import wx
 import time
 import os
+import subprocess
+import platform
 import yaml
 import glob
 import rtmidi
@@ -580,7 +582,7 @@ def main_2():
     print(yaml.dump(d, sort_keys=False))
 
 def load_instruments():
-    root_dir = userfile('')
+    root_dir = datadir()
     filenames = glob.glob('inst-*.yaml', root_dir=root_dir)
     d = {}
     for filename in filenames:
@@ -589,8 +591,17 @@ def load_instruments():
         d[inst.pattern] = inst
     return d
 
+def open_directory(path):
+    if platform.system() == "Windows":
+        os.startfile(path)
+    elif platform.system() == "Darwin":
+        subprocess.Popen(["open", path])
+    else:
+        subprocess.Popen(["xdg-open", path])
+
 def main():
     initialize_config()
+
     config = Config.load(userfile('config.yaml'))
 
     q = queue.Queue()
