@@ -358,6 +358,7 @@ class MouseController:
         self.current_controller = self.move_mouse()
 
     def pan_y(self, y_normed):
+        # TODO: make this configurable
         invert = True
         if invert:
             y_normed = 1.0 - y_normed
