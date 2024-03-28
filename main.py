@@ -4,6 +4,7 @@ import wx
 import time
 import os
 import yaml
+import glob
 import rtmidi
 import math
 import traceback
@@ -578,6 +579,16 @@ def main_2():
     d = main_analyze()
     print(yaml.dump(d, sort_keys=False))
 
+def load_instruments():
+    root_dir = userfile('')
+    filenames = glob.glob('inst-*.yaml', root_dir=root_dir)
+    d = {}
+    for filename in filenames:
+        p = os.path.join(root_dir, filename)
+        inst = Instrument.load(p)
+        d[inst.pattern] = inst
+    return d
+
 def main():
     initialize_config()
     config = Config.load(userfile('config.yaml'))
@@ -586,16 +597,14 @@ def main():
 
     app = wx.App(False)
 
-
     midiin = rtmidi.MidiIn()
     ports = midiin.get_ports()
 
     frame = MainWindow(None, "pointer-cc", q, ports, midiin)
 
-    inst = Instrument.load(userfile("inst-tal-j-8.yaml"))
-    instruments = {inst.pattern: inst}
+    instruments = load_instruments()
 
-    polling = WindowPolling(q, [inst.pattern])
+    polling = WindowPolling(q, list(instruments.keys()))
     polling.start()
 
     dispatcher = Dispatcher(midiin, q, frame, instruments, config)
