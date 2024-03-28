@@ -12,6 +12,7 @@ GUI:
 - name of the thing / icon
 - midi controller ("no midi controller configured")
 - channels
+- Button to view
 - instrument ("no instruments configured", "cannot find any instrument windows")
 - hovered control
   - coordinates

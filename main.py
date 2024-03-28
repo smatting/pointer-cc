@@ -2,6 +2,8 @@ import Quartz
 from PIL import Image
 import wx
 import time
+import os
+import yaml
 import rtmidi
 import math
 import traceback
@@ -12,6 +14,19 @@ import queue
 import copy
 import sys
 import re
+import appdirs
+
+app_name = "pointer-cc"
+app_author = "smatting"
+
+def datadir():
+    return appdirs.user_data_dir(app_name, app_author)
+
+def userfile(p):
+    return os.path.join(datadir(), p)
+
+def initialize_config():
+    os.makedirs(datadir(), exist_ok=True)
 
 class Box:
     def __init__(self, xmin, xmax, ymin, ymax):
@@ -63,16 +78,58 @@ def find_markings(im, marker_color):
         spans_last = spans
     return boxes
 
-class Model:
-    def __init__(self, box, markings):
+
+class Controller:
+    def __init__(self, i, x, y, speed):
+        self.i = i
+        self.x = x
+        self.y = y
+        self.speed = speed
+
+class Instrument:
+    def __init__(self, box, controllers):
         self.box = box
-        self.markings = markings
+        self.controllers = controllers
+
+    @staticmethod
+    def load(path):
+        with open(path, 'r') as f:
+            d = yaml.safe_load(f.read())
+        dim = d["dimensions"]
+        box = Box(0, dim["width"], 0, dim["height"])
+        controllers = []
+        for g in d["controllers"]:
+            c = Controller(int(g['i']), int(g["x"]), int(g["y"]), 100)
+            controllers.append(c)
+        return Instrument(box, controllers)
+
+    def find_closest_controller(self, mx, my):
+        c_best = None
+        d_best = math.inf
+        for c in self.controllers:
+            d = math.pow(c.x - mx, 2.0) + math.pow(c.y - my, 2.0)
+            if d < d_best:
+                c_best = c
+                d_best = d
+        return c_best
 
 def analyze(filename, marker_color=(255, 0, 255, 255)):
     im = Image.open(filename)
-    markings = [b.center() for b in find_markings(im, marker_color)]
+    def f(i, p):
+        x, y = p
+        return {"i": i, "x": x, "y": y}
+
+    controllers = [f(i, b.center()) for i, b in enumerate(find_markings(im, marker_color))]
     b = make_box(0, 0, im.width, im.height) 
-    return Model(b, markings)
+    d = {
+        "dimensions" : {
+            "width": im.width,
+            "height": im.height
+        },
+        "controllers": controllers
+    }
+    return d
+    # return Model(b, markings)
 
 def fmt_hex(i):
     s = hex(i)[2:].upper()
@@ -276,7 +333,7 @@ class MouseController:
 
         if self.last_controller_turned is not None:
             if self.current_controller is not None:
-                if self.last_controller_turned != self.current_controller:
+                if self.last_controller_turned.i != self.current_controller.i:
                     self.last_controller_accum = 0.0
 
         if self.cc_last is not None:
@@ -308,24 +365,12 @@ class MouseController:
         self.freewheeling = True
         self.freewheeling_direction = None
 
-
     def move_mouse(self):
-        i, (mx, my) = self.find_closest_marker(self.mx, self.my)
-        # mx, my = self.mx, self.my
-
-        x, y = self.model_to_screen.apply(mx, my)
+        c = self.model.find_closest_controller(self.mx, self.my)
+        x, y = self.model_to_screen.apply(c.x, c.y)
         mouse.move(int(x), int(y))
-        return i
+        return c
 
-    def find_closest_marker(self, mx, my):
-        d_best = math.inf
-        i_best = 0
-        for i, (x, y) in enumerate(self.model.markings):
-            d = math.pow(x - mx, 2.0) + math.pow(y - my, 2.0)
-            if d < d_best:
-                i_best = i
-                d_best = d
-        return i_best, self.model.markings[i_best]
 
 
 class MainWindow(wx.Frame):
@@ -357,21 +402,25 @@ class MainWindow(wx.Frame):
         wx.GetApp().ExitMainLoop()
 
 
+def main_2():
+    d = main_analyze()
+    print(yaml.dump(d, sort_keys=False))
 
 def main():
+    initialize_config()
+
+    inst = Instrument.load(userfile("inst-tal-j-8.yaml"))
+
     q = queue.Queue()
 
     app = wx.App(False)
     frame = MainWindow(None, "Hello World", q)
 
-    print('analyzing..', end='')
-    model = main_analyze()
-    print('done.')
 
     window = get_windows_mac()[0]
     NOVA_PORT = 'Launch Control XL'
     midiin, port = open_midiport(NOVA_PORT, "input")
-    mouse_controller = MouseController(window, model)
+    mouse_controller = MouseController(window, inst)
     dispatcher = Dispatcher(midiin, mouse_controller, q, frame)
     dispatcher.start()
     #
