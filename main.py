@@ -20,7 +20,7 @@ from enum import Enum
 app_name = "pointer-cc"
 app_author = "smatting"
 
-Command = Enum('Command', ['QUIT', 'CHANGE_MIDI_CHANNEL'])
+Command = Enum('Command', ['QUIT', 'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW'])
 
 def datadir():
     return appdirs.user_data_dir(app_name, app_author)
@@ -37,6 +37,12 @@ class Box:
         self.xmax = xmax
         self.ymin = ymin
         self.ymax = ymax
+
+    def __eq__(self, other):
+        return self.totuple() == other.totuple()
+
+    def totuple(self):
+        return (self.xmin, self.xmax, self.ymin, self.ymax)
 
     def center(self):
         x = self.xmin + (self.xmax - self.xmin) // 2
@@ -90,7 +96,8 @@ class Controller:
         self.speed_multiplier = speed_multiplier
 
 class Instrument:
-    def __init__(self, box, controllers):
+    def __init__(self, pattern, box, controllers):
+        self.pattern = pattern
         self.box = box
         self.controllers = controllers
 
@@ -109,7 +116,8 @@ class Instrument:
                 speed = None
             c = Controller(int(g['i']), int(g["x"]), int(g["y"]), speed)
             controllers.append(c)
-        return Instrument(box, controllers)
+        pattern = d['window_title_pattern']
+        return Instrument(pattern, box, controllers)
 
     def find_closest_controller(self, mx, my):
         c_best = None
@@ -145,13 +153,14 @@ def fmt_hex(i):
     return prefix + hex(i)[2:].upper()
 
 class Dispatcher(threading.Thread):
-    def __init__(self, midiin, mouse_controller, queue, frame):
+    def __init__(self, midiin, queue, frame, instruments):
         super(Dispatcher, self).__init__()
         self.midiin = midiin
         self.queue = queue
         self.frame = frame
-        self.mouse_controller = mouse_controller
         self.midi_channel = None
+        self.instruments = instruments
+        self.controllers = {}
 
     def fmt_message(self, message, prefix):
         input = (' '.join([fmt_hex(b) for b in message]))
@@ -159,6 +168,24 @@ class Dispatcher(threading.Thread):
         # chn = self.channels[self.current_channel]
         # state = f'chn:{(chn.chn+1):02d} [{chn.instrument.name}] p:{chn.current_page}'
         return (prefix + input + " dec: " + input_dec)
+
+    def get_active_controller(self):
+        if len(self.controllers) == 0:
+            return None
+
+        elif len(self.controllers) == 1:
+            return list(self.controllers.values())[0]
+
+        else:
+            # return leftmost; TODO: find the one with center closest to pointer
+            cbest = None
+            xmin = math.inf
+            for c in self.controllers.values():
+                if c.window.box.xmin < xmin:
+                    xmin = c.window.box.xmin
+                    cbest = c
+            return cbest
+
 
     def __call__(self, event, data=None):
         try:
@@ -169,27 +196,26 @@ class Dispatcher(threading.Thread):
             if self.midi_channel is not None:
                 if ch != self.midi_channel:
                     return
+    
+            controller = self.get_active_controller()
 
             # msg_display = self.fmt_message(message, str(self.mouse_controller.current_controller) + " ")
+
             midi_msg_text = self.fmt_message(message, "")
-            if self.mouse_controller.current_controller is None:
-                cc_text = ""
-            else:
-                ms = self.mouse_controller.current_controller.speed_multiplier
-                if ms is not None:
-                    s = f', speed: {ms}'
+
+            cc_text = ""
+            if controller:
+                if controller.current_controller is None:
+                    cc_text = ""
                 else:
-                    s = ''
-                cc_text = str(f"i: {self.mouse_controller.current_controller.i}" + s)
+                    ms = controller.current_controller.speed_multiplier
+                    if ms is not None:
+                        s = f', speed: {ms}'
+                    else:
+                        s = ''
+                    cc_text = str(f"i: {controller.current_controller.i}" + s)
 
             wx.CallAfter(self.frame.update_view, midi_msg_text, cc_text)
-
-            # note on(?)
-            if message[0] & 0xf0 == 0x90:
-                if message[1] == 0x3c:
-                    print('aha!')
-                    self.queue.put(42)
-                pass
 
             # note off(?)
             if message[0] & 0xf0 == 0x80:
@@ -199,19 +225,23 @@ class Dispatcher(threading.Thread):
             if message[0] & 0xf0 == 0xb0:
                 if message[1] == 0x4d:
                     x_normed = message[2] / 127.0
-                    self.mouse_controller.pan_x(x_normed)
+                    if controller:
+                        controller.pan_x(x_normed)
 
                 if message[1] == 0x4e:
                     y_normed = message[2] / 127.0
-                    self.mouse_controller.pan_y(y_normed)
+                    if controller:
+                        controller.pan_y(y_normed)
 
                 if message[1] == 0x4f:
                     cc_value = message[2]
-                    self.mouse_controller.turn(cc_value)
+                    if controller:
+                        controller.turn(cc_value)
 
                 # freewheeling button
                 if message[1] == 0x50:
-                    self.mouse_controller.freewheel()
+                    if controller:
+                        controller.freewheel()
 
         except Exception as e:
             traceback.print_exception(e)
@@ -230,36 +260,17 @@ class Dispatcher(threading.Thread):
                     self.midi_channel = None
                 else:
                     self.midi_channel = item[1] - 1
-
-class Window:
-    def __init__(self, title, box):
-        self.title = title
-        self.box = box
+            elif cmd == Command.UPDATE_WINDOW:
+                name = item[1]
+                window = item[2]
+                if window is None:
+                    if name in self.controllers:
+                        del self.controllers[name]
+                else:
+                    self.controllers[name] = MouseController(self.instruments[window.pattern], window)
 
 def main_analyze():
     return analyze("instruments/tal-jupiter.png")
-
-def matches_any(window, name_patterns):
-    name = window.get(Quartz.kCGWindowName)
-    if name is None:
-        return False
-    else:
-        for pattern in name_patterns:
-            if re.search(pattern, name):
-                return True
-        return False
-    
-def get_windows_mac(name_patterns=["TAL-J-8"]):
-    windows = Quartz.CGWindowListCopyWindowInfo(0, Quartz.kCGNullWindowID)
-    result = []
-    for w in filter(lambda w: matches_any(w, name_patterns), windows):
-        bounds = w.get(Quartz.kCGWindowBounds)
-        if bounds:
-            b = make_box(int(bounds['X']), int(bounds['Y']), int(bounds['Width']), int(bounds['Height']))
-            title = w[Quartz.kCGWindowName]
-            window = Window(title, b)
-            result.append(window)
-    return result
 
 
 # affine transform that can be scaling and translation
@@ -309,16 +320,9 @@ def window_to_model(window_box, model_box):
     return model_to_window(window_box, model_box).inverse()
 
 class MouseController:
-    def __init__(self, window, model):
-        self.window = window
+    def __init__(self, model, window):
         self.model = model
-
-        t = window_to_model(window.box, model.box)
-        s2w = screen_to_window(window.box)
-        t.multiply_right(s2w)
-
-        self.screen_to_model = t
-        self.model_to_screen = self.screen_to_model.inverse()
+        self.set_window(window)
 
         self.mx = 0.0
         self.my = 0.0
@@ -331,10 +335,18 @@ class MouseController:
         self.last_controller_turned = None
         self.last_controller_accum = 0.0
 
+    def set_window(self, window):
+        window_box = window.box
+        t = window_to_model(window_box, self.model.box)
+        s2w = screen_to_window(window_box)
+        t.multiply_right(s2w)
+        self.screen_to_model = t
+        self.model_to_screen = self.screen_to_model.inverse()
+        self.window = window
+
     def pan_x(self, x_normed):
         self.mx = self.model.box.width * x_normed
         self.current_controller = self.move_mouse()
-
 
     def pan_y(self, y_normed):
         invert = True
@@ -454,6 +466,79 @@ class MainWindow(wx.Frame):
         self.queue.put((Command.CHANGE_MIDI_CHANNEL, i))
 
 
+def matches_name(window, name_pattern):
+    name = window.get(Quartz.kCGWindowName)
+    if name is None:
+        return False
+    else:
+        for pattern in name_patterns:
+            if name.find(pattern) > -1:
+            # if re.search(pattern, name):
+                return True
+        return False
+
+class Window:
+    def __init__(self, pattern, name, box):
+        self.pattern = pattern
+        self.name = box
+        self.box = box
+
+    def totuple(self):
+        return (self.pattern, self.name, self.box)
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        else:
+            return self.totuple() == other.totuple()
+
+def get_windows_mac(name_patterns=["TAL-J-8"]):
+    windows = Quartz.CGWindowListCopyWindowInfo(0, Quartz.kCGNullWindowID)
+    result = {}
+    for w in windows:
+        bounds = w.get(Quartz.kCGWindowBounds)
+        name = str(w.get(Quartz.kCGWindowName))
+        if name is None or bounds is None:
+            continue
+
+        for pattern in name_patterns:
+            if name.find(pattern) > -1:
+                box = make_box(int(bounds['X']), int(bounds['Y']), int(bounds['Width']), int(bounds['Height']))
+                window = Window(pattern, name, box)
+                result[name] = window
+    return result
+
+class WindowPolling(threading.Thread):
+    def __init__(self, queue, patterns):
+        super(WindowPolling, self).__init__()
+        self.patterns = patterns
+        self.queue = queue
+
+        self.event = threading.Event()
+        self.windows = {}
+
+    def run(self):
+        running = True
+        while running:
+            windows = get_windows_mac(self.patterns)
+            for name, window in windows.items():
+                if self.windows.get(name) != windows[name]:
+                    self.queue.put((Command.UPDATE_WINDOW, name, windows[name]))
+                    self.windows[name] = windows[name]
+
+            todelete = []
+            for name in self.windows:
+                if windows.get(name) is None:
+                    self.queue.put((Command.UPDATE_WINDOW, name, None))
+                    todelete.append(name)
+
+            for anem in todelete:
+                del self.windows[name]
+
+            time.sleep(1)
+            if self.event.is_set():
+                running = False
+
 def main_2():
     d = main_analyze()
     print(yaml.dump(d, sort_keys=False))
@@ -462,23 +547,30 @@ def main():
     initialize_config()
 
     inst = Instrument.load(userfile("inst-tal-j-8.yaml"))
+    instruments = {inst.pattern: inst}
 
     q = queue.Queue()
 
-    app = wx.App(True)
+    app = wx.App(False)
 
     midiin = rtmidi.MidiIn()
     ports = midiin.get_ports()
 
     frame = MainWindow(None, "pointer-cc", q, ports, midiin)
+    print('main')
 
-    window = get_windows_mac()[0]
+    polling = WindowPolling(q, [inst.pattern])
+    polling.start()
 
-    mouse_controller = MouseController(window, inst)
-    dispatcher = Dispatcher(midiin, mouse_controller, q, frame)
+    # window = get_windows_mac()[0]
+
+    dispatcher = Dispatcher(midiin, q, frame, instruments)
     dispatcher.start()
     #
     app.MainLoop()
+
+    polling.event.set()
+    polling.join()
 
     dispatcher.join()
 
