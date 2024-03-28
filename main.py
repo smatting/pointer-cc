@@ -551,7 +551,7 @@ class WindowPolling(threading.Thread):
                     self.queue.put((Command.UPDATE_WINDOW, name, None))
                     todelete.append(name)
 
-            for anem in todelete:
+            for name in todelete:
                 del self.windows[name]
 
             time.sleep(1)
