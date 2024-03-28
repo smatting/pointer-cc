@@ -393,19 +393,30 @@ class MouseController:
 
 
 class MainWindow(wx.Frame):
-    def __init__(self, parent, title, q):
+    def __init__(self, parent, title, q, ports, midiin):
         wx.Frame.__init__(self, parent, title=title, size=(200, -1))
         self.queue = q
+        self.midiin = midiin
 
         self.button = wx.Button(self, label="My simple app.")
         self.Bind(
             wx.EVT_BUTTON, self.handle_button_click, self.button
         )
 
+        self.ports = ports
+        self.port_dropdown = wx.ComboBox(self, id=wx.ID_ANY, choices=self.ports, style=wx.CB_READONLY)
+
+        self.connect_button = wx.Button(self, label="Connect")
+        self.Bind(
+            wx.EVT_BUTTON, self.handle_connect_click, self.connect_button
+        )
+
         self.midi_msg_text = wx.StaticText(self, label="<no MIDI received yet>", style=wx.ALIGN_CENTER)
         self.cc_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(self.port_dropdown)
+        self.sizer.Add(self.connect_button)
         self.sizer.Add(self.button)
         self.sizer.Add(self.midi_msg_text)
         self.sizer.Add(self.cc_text)
@@ -423,6 +434,15 @@ class MainWindow(wx.Frame):
         self.Close()
         wx.GetApp().ExitMainLoop()
 
+    def handle_connect_click(self, event):
+        v = self.port_dropdown.GetValue()
+        if v is not None:
+            try:
+                i = self.ports.index(v)
+                self.midiin.open_port(i)
+            except ValueError:
+                pass
+
 
 def main_2():
     d = main_analyze()
@@ -435,13 +455,15 @@ def main():
 
     q = queue.Queue()
 
-    app = wx.App(False)
-    frame = MainWindow(None, "Hello World", q)
+    app = wx.App(True)
 
+    midiin = rtmidi.MidiIn()
+    ports = midiin.get_ports()
+
+    frame = MainWindow(None, "pointer-cc", q, ports, midiin)
 
     window = get_windows_mac()[0]
-    NOVA_PORT = 'Launch Control XL'
-    midiin, port = open_midiport(NOVA_PORT, "input")
+
     mouse_controller = MouseController(window, inst)
     dispatcher = Dispatcher(midiin, mouse_controller, q, frame)
     dispatcher.start()
