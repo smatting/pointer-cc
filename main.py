@@ -163,6 +163,9 @@ class Dispatcher(threading.Thread):
         self.controllers = {}
         self.config = config
 
+        if len(self.instruments) == 0:
+            self.frame.set_window_text("No instruments configured, please read the docs")
+
     def fmt_message(self, message, prefix):
         input = (' '.join([fmt_hex(b) for b in message]))
         input_dec = ' '.join([str(b) for b in message])
@@ -233,8 +236,11 @@ class Dispatcher(threading.Thread):
                     if message[1] == self.config.control_cc:
                         cc_value = message[2]
                         controller.turn(cc_value)
+                        if not controller.freewheeling:
+                            self.frame.set_freewheel_text('')
 
                     if message[1] == self.config.freewheel_cc:
+                        self.frame.set_freewheel_text('freewheeling')
                         controller.freewheel()
 
         except Exception as e:
@@ -261,6 +267,13 @@ class Dispatcher(threading.Thread):
                         del self.controllers[name]
                 else:
                     self.controllers[name] = MouseController(self.instruments[window.pattern], window)
+
+                c = self.get_active_controller()
+                if c is None:
+                    self.frame.set_window_text('No window found')
+                else:
+                    self.frame.set_window_text(c.window.name)
+
 
 def main_analyze():
     return analyze("instruments/tal-jupiter.png")
@@ -420,7 +433,11 @@ class MainWindow(wx.Frame):
         self.channel_dropdown = wx.ComboBox(self, id=wx.ID_ANY, choices=channel_choices, style=wx.CB_READONLY)
         self.Bind(wx.EVT_COMBOBOX, self.handle_channel_choice, self.channel_dropdown)
 
+        self.window_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
+
         self.cc_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
+
+        self.freewheel_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
 
         self.midi_msg_text = wx.StaticText(self, label="<no MIDI received yet>", style=wx.ALIGN_CENTER)
 
@@ -429,6 +446,8 @@ class MainWindow(wx.Frame):
         self.sizer.Add(self.connect_button)
         self.sizer.Add(self.channel_dropdown)
         self.sizer.Add(self.button)
+        self.sizer.Add(self.window_text)
+        self.sizer.Add(self.freewheel_text)
         self.sizer.Add(self.cc_text)
         self.sizer.Add(self.midi_msg_text)
 
@@ -439,6 +458,12 @@ class MainWindow(wx.Frame):
     def update_view(self, midi_msg, cc_text):
         self.midi_msg_text.SetLabel(midi_msg)
         self.cc_text.SetLabel(cc_text)
+
+    def set_window_text(self, text):
+        self.window_text.SetLabel(text)
+
+    def set_freewheel_text(self, text):
+        self.freewheel_text.SetLabel(text)
 
     def handle_button_click(self, event):
         self.queue.put((Command.QUIT, None))
@@ -473,7 +498,7 @@ def matches_name(window, name_pattern):
 class Window:
     def __init__(self, pattern, name, box):
         self.pattern = pattern
-        self.name = box
+        self.name = name
         self.box = box
 
     def totuple(self):
@@ -559,7 +584,7 @@ def main():
 
     q = queue.Queue()
 
-    app = wx.App(True)
+    app = wx.App(False)
 
 
     midiin = rtmidi.MidiIn()
