@@ -1,3 +1,6 @@
+TODOS:
+- Use TOML instead of YAML
+
 Mac OS X:
 
 In order to work app needs to be pre-approved for

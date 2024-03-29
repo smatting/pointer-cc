@@ -629,10 +629,19 @@ def open_directory(path):
     else:
         subprocess.Popen(["xdg-open", path])
 
+
+#
+def request_access():
+    Quartz.CGRequestPostEventAccess()
+    Quartz.CGRequestScreenCaptureAccess()
+
 def main():
     initialize_config()
 
     config = Config.load(userfile('config.txt'))
+
+    request_access()
+    Quartz.CGPreflightScreenCaptureAccess()
 
     q = queue.Queue()
 
