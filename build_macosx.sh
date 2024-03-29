@@ -3,7 +3,8 @@
 set -eo pipefail
 
 
-build=dev
+# build=dev
+build=prod
 
 # Requisite: Install Python from this link https://www.python.org/downloads/release/python-31011/
 python="/Library/Frameworks/Python.framework/Versions/3.10/Resources/Python.app/Contents/MacOS/Python"
@@ -16,5 +17,5 @@ pip install https://github.com/boppreh/mouse/archive/7b773393ed58824b1adf055963a
 if [ "$build" = "dev" ]; then
     rm -rf build dist && python setup.py py2app -A
 else
-    rm -rf build dist &&python setup.py py2app
+    rm -rf build dist && python setup.py py2app
 fi
