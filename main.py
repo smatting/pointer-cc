@@ -3,6 +3,7 @@ from PIL import Image
 import wx
 import time
 import os
+import webbrowser
 import subprocess
 import platform
 import yaml
@@ -22,6 +23,7 @@ from enum import Enum
 
 app_name = "pointer-cc"
 app_author = "smatting"
+app_url = "https://github.com/smatting/pointer-cc/"
 
 Command = Enum('Command', ['QUIT', 'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW'])
 
@@ -417,13 +419,12 @@ class MouseController:
 class MainWindow(wx.Frame):
     def __init__(self, parent, title, q, ports, midiin):
         wx.Frame.__init__(self, parent, title=title, size=(200, -1))
+
+        self.Bind(wx.EVT_CLOSE, self.on_close)
+
+
         self.queue = q
         self.midiin = midiin
-
-        self.button = wx.Button(self, label="Quit")
-        self.Bind(
-            wx.EVT_BUTTON, self.handle_button_click, self.button
-        )
 
         self.ports = ports
         self.port_dropdown = wx.ComboBox(self, id=wx.ID_ANY, choices=self.ports, style=wx.CB_READONLY)
@@ -445,11 +446,30 @@ class MainWindow(wx.Frame):
 
         self.midi_msg_text = wx.StaticText(self, label="<no MIDI received yet>", style=wx.ALIGN_CENTER)
 
+        filemenu= wx.Menu()
+
+        about = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
+        self.Bind(wx.EVT_MENU, self.on_help, about)
+
+        open_config = filemenu.Append(wx.ID_ANY, "&Open Config Dir"," Open configuartion directory")
+        self.Bind(wx.EVT_MENU, self.on_open_config, open_config)
+
+        exitMenutItem = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
+        self.Bind(wx.EVT_MENU, self.on_exit, exitMenutItem)
+
+        helpmenu = wx.Menu()
+        get_help = helpmenu.Append(wx.ID_HELP, "Get &Help", "Get Help")
+        self.Bind(wx.EVT_MENU, self.on_help, get_help)
+
+        menuBar = wx.MenuBar()
+        menuBar.Append(filemenu,"&File") # Adding the "filemenu" to the MenuBar
+        menuBar.Append(helpmenu,"&Help") # Adding the "filemenu" to the MenuBar
+        self.SetMenuBar(menuBar)  # Adding the MenuBar to the Frame content.
+
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.port_dropdown)
         self.sizer.Add(self.connect_button)
         self.sizer.Add(self.channel_dropdown)
-        self.sizer.Add(self.button)
         self.sizer.Add(self.window_text)
         self.sizer.Add(self.freewheel_text)
         self.sizer.Add(self.cc_text)
@@ -458,6 +478,17 @@ class MainWindow(wx.Frame):
         self.SetSizer(self.sizer)
         self.SetAutoLayout(True)
         self.Show()
+
+    def on_help(self, event):
+        webbrowser.open(app_url)
+
+    def on_open_config(self, event):
+        open_directory(datadir())
+
+    def on_close(self, event):
+        self.queue.put((Command.QUIT, None))
+        wx.GetApp().ExitMainLoop()
+        event.Skip()
 
     def update_view(self, midi_msg, cc_text):
         self.midi_msg_text.SetLabel(midi_msg)
@@ -469,10 +500,8 @@ class MainWindow(wx.Frame):
     def set_freewheel_text(self, text):
         self.freewheel_text.SetLabel(text)
 
-    def handle_button_click(self, event):
-        self.queue.put((Command.QUIT, None))
+    def on_exit(self, event):
         self.Close()
-        wx.GetApp().ExitMainLoop()
 
     def handle_connect_click(self, event):
         v = self.port_dropdown.GetValue()
@@ -584,7 +613,7 @@ def main_2():
 
 def load_instruments():
     root_dir = datadir()
-    filenames = glob.glob('inst-*.yaml', root_dir=root_dir)
+    filenames = glob.glob('inst-*.txt', root_dir=root_dir)
     d = {}
     for filename in filenames:
         p = os.path.join(root_dir, filename)
@@ -603,7 +632,7 @@ def open_directory(path):
 def main():
     initialize_config()
 
-    config = Config.load(userfile('config.yaml'))
+    config = Config.load(userfile('config.txt'))
 
     q = queue.Queue()
 
