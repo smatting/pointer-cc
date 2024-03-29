@@ -1,27 +1,9 @@
 TODOS:
+- make image analysis available in GUI
+- write documentation
+- add support for drag-controlled vsts
+- Sign app with developer id
+- logo
+- create video
+- windows version 
 - Use TOML instead of YAML
-
-Mac OS X:
-
-In order to work app needs to be pre-approved for
-1. screen recording
-2. controlling the computer
-in Security Settings
-
-
-GUI:
-
-- Menu -> Help / Open Configuration Directory
-- name of the thing / icon
-- midi controller ("no midi controller configured")
-- channels
-- Button to view
-- instrument ("no instruments configured", "cannot find any instrument windows")
-- hovered control
-  - coordinates
-  - type: drag / scroll
-  - speed
-  - delta (<freewheel>)
-- freewheeling indicator
-- last midi message
-
