@@ -368,15 +368,13 @@ class MouseController:
         self.current_controller = self.move_mouse()
 
     def turn(self, cc_value):
-        val = cc_value
-
         if self.last_controller_turned is not None:
             if self.current_controller is not None:
                 if self.last_controller_turned.i != self.current_controller.i:
                     self.last_controller_accum = 0.0
 
         if self.cc_last is not None:
-            delta = val - self.cc_last
+            delta = cc_value - self.cc_last
             # print(delta)
 
             if self.freewheeling:
@@ -402,7 +400,7 @@ class MouseController:
         if self.last_controller_turned is None:
             self.last_controller_turned = self.current_controller
 
-        self.cc_last = val
+        self.cc_last = cc_value
 
     def freewheel(self):
         self.freewheeling = True
