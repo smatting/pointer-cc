@@ -100,6 +100,9 @@ class Controller:
         self.y = y
         self.speed_multiplier = speed_multiplier
 
+    def __eq__(self, other):
+        return self.i == other.i
+
 class Instrument:
     def __init__(self, pattern, box, controllers):
         self.pattern = pattern
@@ -239,8 +242,8 @@ class Dispatcher(threading.Thread):
                         controller.pan_y(y_normed)
 
                     if message[1] == self.config.control_cc:
-                        cc_value = message[2]
-                        controller.turn(cc_value)
+                        cc = message[2]
+                        controller.turn(cc)
                         if not controller.freewheeling:
                             self.frame.set_freewheel_text('')
 
@@ -337,13 +340,13 @@ class MouseController:
 
         self.mx = 0.0
         self.my = 0.0
+        self.current_controller = None
 
         self.freewheeling = False
         self.freewheeling_direction = None
-        self.cc_last = None
-        self.current_controller = None
 
         self.last_controller_turned = None
+        self.last_cc = 0
         self.last_controller_accum = 0.0
 
     def set_window(self, window):
@@ -357,7 +360,7 @@ class MouseController:
 
     def pan_x(self, x_normed):
         self.mx = self.model.box.width * x_normed
-        self.current_controller = self.move_mouse()
+        self.current_controller = self.move_pointer_to_closest()
 
     def pan_y(self, y_normed):
         # TODO: make this configurable
@@ -365,48 +368,47 @@ class MouseController:
         if invert:
             y_normed = 1.0 - y_normed
         self.my = self.model.box.height * y_normed
-        self.current_controller = self.move_mouse()
+        self.current_controller = self.move_pointer_to_closest()
 
-    def turn(self, cc_value):
+    def turn(self, cc):
+        # TODO: query screen, self.mx self.my from screen
+        self.current_controller = self.model.find_closest_controller(self.mx, self.my)
+        
         if self.last_controller_turned is not None:
+            if self.last_controller_turned != self.current_controller:
+                self.last_cc = cc
+                self.last_controller_accum = 0.0
+
+        delta = cc - self.last_cc
+
+        if self.freewheeling:
+            if self.freewheeling_direction is None:
+                self.freewheeling_direction = delta > 0
+            elif self.freewheeling_direction != (delta > 0):
+                self.freewheeling = False
+                self.freewheeling_direction = None
+
+        else:
+            speed = 1.46
+
             if self.current_controller is not None:
-                if self.last_controller_turned.i != self.current_controller.i:
-                    self.last_controller_accum = 0.0
+                k = self.current_controller.speed_multiplier
+                if k is not None:
+                    speed *= k / 100.0
 
-        if self.cc_last is not None:
-            delta = cc_value - self.cc_last
-            # print(delta)
+            self.last_controller_accum += delta * speed
+            k_whole = int(self.last_controller_accum)
+            self.last_controller_accum -= k_whole
+            mouse.wheel(k_whole)
 
-            if self.freewheeling:
-                if self.freewheeling_direction is None:
-                    self.freewheeling_direction = delta > 0
-                elif self.freewheeling_direction != (delta > 0):
-                    self.freewheeling = False
-                    self.freewheeling_direction = None
-
-            if not self.freewheeling:
-                speed = 1.46
-
-                if self.current_controller is not None:
-                    k = self.current_controller.speed_multiplier
-                    if k is not None:
-                        speed *= k / 100.0
-
-                self.last_controller_accum += delta * speed
-                k_whole = int(self.last_controller_accum)
-                self.last_controller_accum -= k_whole
-                mouse.wheel(k_whole)
-
-        if self.last_controller_turned is None:
-            self.last_controller_turned = self.current_controller
-
-        self.cc_last = cc_value
+        self.last_controller_turned = self.current_controller
+        self.last_cc = cc
 
     def freewheel(self):
         self.freewheeling = True
         self.freewheeling_direction = None
 
-    def move_mouse(self):
+    def move_pointer_to_closest(self):
         c = self.model.find_closest_controller(self.mx, self.my)
         x, y = self.model_to_screen.apply(c.x, c.y)
         mouse.move(int(x), int(y))
