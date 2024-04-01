@@ -3,7 +3,9 @@ TODOS:
 - make image analysis available in GUI
 - write documentation
 - Sign app with developer id
+- auto-connect MIDI
 - logo
 - create video
 - windows version 
 - Use TOML instead of YAML
+- Rename controllers to controls

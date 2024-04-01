@@ -1,5 +1,7 @@
 name: OB-Xd
 window_title_pattern: OB-Xd
+controller:
+  type: wheel
 dimensions:
   width: 1150
   height: 484

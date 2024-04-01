@@ -92,9 +92,17 @@ def find_markings(im, marker_color):
         spans_last = spans
     return boxes
 
+ControlType = Enum('ControlType', ['WHEEL', 'DRAG'])
+
+
+class ConfigError(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+        super(ConfigError, self).__init__(self.msg)
 
 class Controller:
-    def __init__(self, i, x, y, speed_multiplier=None):
+    def __init__(self, type_, i, x, y, speed_multiplier=None):
+        self.type_ = type_
         self.i = i
         self.x = x
         self.y = y
@@ -102,6 +110,23 @@ class Controller:
 
     def __eq__(self, other):
         return self.i == other.i
+
+    @staticmethod
+    def parse_type(d):
+        typ = d.get('type')
+        if typ is None:
+            raise ConfigError("controller.type is not defined")
+        else:
+            if typ == 'wheel':
+                return ControlType.WHEEL
+            elif typ == 'drag':
+                return ControlType.DRAG
+
+def parse_maybe(f):
+    try:
+        return f()
+    except ConfigError:
+        return None
 
 class Instrument:
     def __init__(self, pattern, box, controllers):
@@ -115,6 +140,14 @@ class Instrument:
             d = yaml.safe_load(f.read())
         dim = d["dimensions"]
         box = Box(0, dim["width"], 0, dim["height"])
+
+
+        cdef = d.get('controller')
+        if cdef is None:
+            raise ConfigError('controller is not defined')
+        default_type = Controller.parse_type(cdef)
+
+
         controllers = []
         for g in d["controllers"]:
             mspeed = g.get('speed')
@@ -122,7 +155,9 @@ class Instrument:
                 speed = int(mspeed)
             else:
                 speed = None
-            c = Controller(int(g['i']), int(g["x"]), int(g["y"]), speed)
+
+            typ = parse_maybe(lambda: Controller.parse_type(g)) or default_type
+            c = Controller(typ, int(g['i']), int(g["x"]), int(g["y"]), speed)
             controllers.append(c)
         pattern = d['window_title_pattern']
         return Instrument(pattern, box, controllers)
@@ -284,8 +319,8 @@ class Dispatcher(threading.Thread):
 
 
 def main_analyze():
-    return analyze("instruments/tal-jupiter.png")
-
+    # return analyze("instruments/tal-jupiter.png")
+    return analyze("instruments/prophet-5-v-marked.png")
 
 # affine transform that can be scaling and translation
 class Affine:
@@ -348,7 +383,11 @@ class MouseController:
         self.last_controller_turned = None
         self.last_cc = 0
         self.last_controller_accum = 0.0
+        self.last_turn_screen_x = 0
+        self.last_turn_screen_y = 0
+        self.last_turn_dragging = False
 
+        
     def set_window(self, window):
         window_box = window.box
         t = window_to_model(window_box, self.model.box)
@@ -371,13 +410,16 @@ class MouseController:
         self.current_controller = self.move_pointer_to_closest()
 
     def turn(self, cc):
-        # TODO: query screen, self.mx self.my from screen
+        screen_x, screen_y = mouse.get_position()
+        self.mx, self.my = self.screen_to_model.apply(screen_x, screen_y)
         self.current_controller = self.model.find_closest_controller(self.mx, self.my)
         
         if self.last_controller_turned is not None:
             if self.last_controller_turned != self.current_controller:
                 self.last_cc = cc
                 self.last_controller_accum = 0.0
+                self.last_turn_screen_x = screen_x
+                self.last_turn_screen_y = screen_y
 
         delta = cc - self.last_cc
 
@@ -399,10 +441,21 @@ class MouseController:
             self.last_controller_accum += delta * speed
             k_whole = int(self.last_controller_accum)
             self.last_controller_accum -= k_whole
-            mouse.wheel(k_whole)
+
+            if self.current_controller.type_ == ControlType.WHEEL:
+                mouse.wheel(k_whole)
+            elif  self.current_controller.type_ == ControlType.DRAG:
+                if self.last_turn_dragging:
+                    pass
+                else:
+                    mouse.press()
+                    self.last_turn_dragging = True
+                mouse.move(screen_x, screen_y - k_whole)
 
         self.last_controller_turned = self.current_controller
         self.last_cc = cc
+        self.last_turn_screen_x = screen_x
+        self.last_turn_screen_y = screen_y
 
     def freewheel(self):
         self.freewheeling = True
@@ -410,6 +463,13 @@ class MouseController:
 
     def move_pointer_to_closest(self):
         c = self.model.find_closest_controller(self.mx, self.my)
+
+        if self.last_controller_turned is not None:
+            if c != self.last_controller_turned:
+                if self.last_turn_dragging:
+                    mouse.release()
+                    self.last_turn_dragging = False
+
         x, y = self.model_to_screen.apply(c.x, c.y)
         mouse.move(int(x), int(y))
         return c
