@@ -168,7 +168,6 @@ class Controller:
             type_= maybe(d.get('type'), control_type_bij.enum, default_type)
         
             m = maybe(d.get('m'), expect_float, 1.0)
-
             return Controller(type_, i, x, y, m)
 
         except ConfigError as ce:
@@ -474,11 +473,11 @@ class MouseController:
         self.freewheeling_direction = None
 
         self.last_controller_turned = None
-        self.last_cc = 0
+        self.last_cc = None
         self.last_controller_accum = 0.0
         self.last_turn_screen_x = 0
         self.last_turn_screen_y = 0
-        self.last_turn_dragging = False
+        self.dragging = False
 
         
     def set_window(self, window):
@@ -504,7 +503,9 @@ class MouseController:
 
     def turn(self, cc):
         screen_x, screen_y = mouse.get_position()
-        self.mx, self.my = self.screen_to_model.apply(screen_x, screen_y)
+        if not self.dragging:
+            self.mx, self.my = self.screen_to_model.apply(screen_x, screen_y)
+
         self.current_controller = self.model.find_closest_controller(self.mx, self.my)
         
         if self.last_controller_turned is not None:
@@ -513,6 +514,9 @@ class MouseController:
                 self.last_controller_accum = 0.0
                 self.last_turn_screen_x = screen_x
                 self.last_turn_screen_y = screen_y
+
+        if self.last_cc is None:
+            self.last_cc = cc
 
         delta = cc - self.last_cc
 
@@ -524,13 +528,18 @@ class MouseController:
                 self.freewheeling_direction = None
 
         else:
+            # TODO
             speed = 1.46
 
             if self.current_controller is not None:
-                k = self.current_controller.m
-                if k is not None:
-                    speed *= k / 100.0
+                m = self.current_controller.m
+                if m is not None:
+                    if m != 1.0:
+                        print(m)
+                    speed *= m
 
+            print('delta', delta)
+            print('delta * speed', delta * speed)
             self.last_controller_accum += delta * speed
             k_whole = int(self.last_controller_accum)
             self.last_controller_accum -= k_whole
@@ -538,11 +547,11 @@ class MouseController:
             if self.current_controller.type_ == ControlType.WHEEL:
                 mouse.wheel(k_whole)
             elif  self.current_controller.type_ == ControlType.DRAG:
-                if self.last_turn_dragging:
+                if self.dragging:
                     pass
                 else:
                     mouse.press()
-                    self.last_turn_dragging = True
+                    self.dragging = True
                 mouse.move(screen_x, screen_y - k_whole)
 
         self.last_controller_turned = self.current_controller
@@ -560,9 +569,9 @@ class MouseController:
         # if self.last_controller_turned is not None:
         #     if c != self.last_controller_turned:
 
-        if self.last_turn_dragging:
+        if self.dragging:
             mouse.release()
-            self.last_turn_dragging = False
+            self.dragging = False
 
         x, y = self.model_to_screen.apply(c.x, c.y)
         mouse.move(int(x), int(y))
@@ -811,7 +820,7 @@ def expect_value(d, k):
 
 def expect_float(v):
     try:
-        float(v)
+        return float(v)
     except:
         raise ConfigError(f'Not a float: \"{str(v)}\"')
 

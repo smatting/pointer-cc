@@ -1,11 +1,13 @@
 TODOS:
-- Use TOML instead of YAML
-- free MIDI bindings
-- add support for drag-controlled vsts
+- [x] Use TOML instead of YAML
+- [x] free MIDI bindings
+- [x] add support for drag-controlled vsts
+- [x] fix bug: drag moves the pointer
+- [ ] respect default speeds
+- auto-connect MIDI
 - make image analysis available in GUI
 - write documentation
 - Sign app with developer id
-- auto-connect MIDI
 - remove yaml
 - logo
 - create video

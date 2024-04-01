@@ -16,7 +16,7 @@ height = 704
 [controls.c1]
 x = 374
 y = 121
-m = 1.0
+m = 6.0
 
 [controls.c2]
 x = 535
