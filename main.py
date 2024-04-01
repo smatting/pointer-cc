@@ -100,6 +100,12 @@ class ConfigError(Exception):
         self.msg = msg
         super(ConfigError, self).__init__(self.msg)
 
+def parse_controller_type(typ):
+    if typ == 'wheel':
+        return ControlType.WHEEL
+    elif typ == 'drag':
+        return ControlType.DRAG
+
 class Controller:
     def __init__(self, type_, i, x, y, speed_multiplier=None):
         self.type_ = type_
@@ -111,22 +117,12 @@ class Controller:
     def __eq__(self, other):
         return self.i == other.i
 
-    @staticmethod
-    def parse_type(d):
-        typ = d.get('type')
-        if typ is None:
-            raise ConfigError("controller.type is not defined")
-        else:
-            if typ == 'wheel':
-                return ControlType.WHEEL
-            elif typ == 'drag':
-                return ControlType.DRAG
 
-def parse_maybe(f):
-    try:
-        return f()
-    except ConfigError:
-        return None
+def maybe(mv, f, default):
+    if mv is None:
+        return default
+    else:
+        return f(mv)
 
 class Instrument:
     def __init__(self, pattern, box, controllers):
@@ -145,7 +141,7 @@ class Instrument:
         cdef = d.get('controller')
         if cdef is None:
             raise ConfigError('controller is not defined')
-        default_type = Controller.parse_type(cdef)
+        default_type = parse_controller_type(cdef['type'])
 
 
         controllers = []
@@ -156,8 +152,9 @@ class Instrument:
             else:
                 speed = None
 
-            typ = parse_maybe(lambda: Controller.parse_type(g)) or default_type
-            c = Controller(typ, int(g['i']), int(g["x"]), int(g["y"]), speed)
+            type_ = maybe(g.get('type'), parse_controller_type, default_type)
+            c = Controller(type_, int(g['i']), int(g["x"]), int(g["y"]), speed)
+
             controllers.append(c)
         pattern = d['window_title_pattern']
         return Instrument(pattern, box, controllers)
@@ -463,12 +460,13 @@ class MouseController:
 
     def move_pointer_to_closest(self):
         c = self.model.find_closest_controller(self.mx, self.my)
+        #
+        # if self.last_controller_turned is not None:
+        #     if c != self.last_controller_turned:
 
-        if self.last_controller_turned is not None:
-            if c != self.last_controller_turned:
-                if self.last_turn_dragging:
-                    mouse.release()
-                    self.last_turn_dragging = False
+        if self.last_turn_dragging:
+            mouse.release()
+            self.last_turn_dragging = False
 
         x, y = self.model_to_screen.apply(c.x, c.y)
         mouse.move(int(x), int(y))
