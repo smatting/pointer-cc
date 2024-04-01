@@ -322,7 +322,7 @@ class Dispatcher(threading.Thread):
                 if controller.current_controller is None:
                     cc_text = ""
                 else:
-                    ms = controller.current_controller.speed_multiplier
+                    ms = controller.current_controller.m
                     if ms is not None:
                         s = f', speed: {ms}'
                     else:
@@ -336,25 +336,31 @@ class Dispatcher(threading.Thread):
                 pass
 
             if controller:
-                # midi cc
                 if message[0] & 0xf0 == 0xb0:
-                    if message[1] == self.config.pan_x_cc:
-                        x_normed = message[2] / 127.0
-                        controller.pan_x(x_normed)
+                    for binding in self.config.bindings:
+                        if binding.cc == message[1]:
+                            if binding.command == Command.PAN_X:
+                                x_normed = message[2] / 127.0
+                                controller.pan_x(x_normed)
 
-                    if message[1] == self.config.pan_y_cc:
-                        y_normed = message[2] / 127.0
-                        controller.pan_y(y_normed)
+                            elif binding.command == Command.PAN_X_INV:
+                                x_normed = message[2] / 127.0
+                                controller.pan_x(1.0 - x_normed)
 
-                    if message[1] == self.config.control_cc:
-                        cc = message[2]
-                        controller.turn(cc)
-                        if not controller.freewheeling:
-                            self.frame.set_freewheel_text('')
+                            elif binding.command == Command.PAN_Y:
+                                y_normed = message[2] / 127.0
+                                controller.pan_y(y_normed)
 
-                    if message[1] == self.config.freewheel_cc:
-                        self.frame.set_freewheel_text('freewheeling')
-                        controller.freewheel()
+                            elif binding.command == Command.PAN_Y_INV:
+                                y_normed = message[2] / 127.0
+                                controller.pan_y(1.0 - y_normed)
+
+                            elif binding.command == Command.ADJUST_CONTROL:
+                                cc = message[2]
+                                controller.turn(cc)
+
+                            elif binding.command == Command.FREEWHEEL:
+                                controller.freewheel()
 
         except Exception as e:
             traceback.print_exception(e)
@@ -521,7 +527,7 @@ class MouseController:
             speed = 1.46
 
             if self.current_controller is not None:
-                k = self.current_controller.speed_multiplier
+                k = self.current_controller.m
                 if k is not None:
                     speed *= k / 100.0
 
@@ -811,7 +817,7 @@ def expect_float(v):
 
 def expect_decimal(s):
     try:
-        int(s)
+        return int(s)
     except:
         raise ConfigError(f"Not a decimal: \"{s}\"")
 
