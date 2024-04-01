@@ -165,9 +165,9 @@ class Controller:
             y_s = expect_value(d, "y")
             y = expect_decimal(y_s)
 
-            type_= maybe(dc.get('type'), control_type_bij.enum, default_type)
+            type_= maybe(d.get('type'), control_type_bij.enum, default_type)
         
-            m = maybe(dc.get('m'), expect_float, 1.0)
+            m = maybe(d.get('m'), expect_float, 1.0)
 
             return Controller(type_, i, x, y, m)
 
@@ -190,6 +190,8 @@ class Instrument:
     @staticmethod
     def load(path, context):
         try:
+            controls = []
+
             with open(path, 'r') as f:
                 d = tomlkit.load(f)
 
@@ -212,10 +214,10 @@ class Instrument:
             default_drag_speed = in_context(lambda: expect_float(drag_speed_s), 'drag_speed')
 
 
-            controls = expect_value(d, 'controls')
-            for control_id, v in controls.items():
+            controls_unparsed = expect_value(d, 'controls')
+            for control_id, v in controls_unparsed.items():
                 context = "for control {control_id}"
-                c = Controller.parse(v, context)
+                c = Controller.parse(v, control_id, default_wheel_speed, default_drag_speed, default_type, context)
                 controls.append(c)
 
             window = expect_value(d, 'window')
