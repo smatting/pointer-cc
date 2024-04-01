@@ -15,6 +15,7 @@ import mouse
 from rtmidi.midiutil import open_midiport
 import threading
 import queue
+import tomlkit
 import copy
 import sys
 import re
@@ -25,16 +26,49 @@ app_name = "pointer-cc"
 app_author = "smatting"
 app_url = "https://github.com/smatting/pointer-cc/"
 
-Command = Enum('Command', ['QUIT', 'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW'])
+InternalCommand = Enum('InternalCommand', ['QUIT', 'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW'])
+
+class Bijection:
+    def __init__(self, a_name, b_name, atob_pairs):
+        self._d_atob = dict(atob_pairs)
+        self._d_btoa = dict([(b, a) for (a, b) in atob_pairs])
+
+        setattr(self, a_name, self._a)
+        setattr(self, b_name, self._b)
+
+    def _a(self, b):
+        v = self._d_btoa[b]
+        if v is None:
+            knowns = ", ".join([f"\"{str(k)}\"" for k in self._d_btoa.keys()])
+            msg = f'Unknown value "{str(b)}", known values are: {knowns}.' 
+            raise ConfigError(msg)
+        return v
+
+    def _b(self, a):
+        v = self._d_atob[a]
+        if v is None:
+            knowns = ", ".join([f"\"{str(k)}\"" for k in self._d_atob.keys()])
+            msg = f'Unknown value "{str(a)}", known values are: {knowns}.' 
+            raise ConfigError(msg)
+        return v
 
 def datadir():
     return appdirs.user_data_dir(app_name, app_author)
 
 def userfile(p):
+    import tomlkit
     return os.path.join(datadir(), p)
+
+def configfile():
+    return userfile('config.txt')
 
 def initialize_config():
     os.makedirs(datadir(), exist_ok=True)
+    cf = configfile()
+    if not os.path.exists(cf):
+        with open(cf, 'w') as f:
+            conf = default_config()
+            f.write(conf.as_string())
 
 class Box:
     def __init__(self, xmin, xmax, ymin, ymax):
@@ -100,23 +134,46 @@ class ConfigError(Exception):
         self.msg = msg
         super(ConfigError, self).__init__(self.msg)
 
-def parse_controller_type(typ):
-    if typ == 'wheel':
-        return ControlType.WHEEL
-    elif typ == 'drag':
-        return ControlType.DRAG
+def in_context(f, context):
+    try:
+        return f()
+    except ConfigError as ce:
+        ce.msg = ce.msg + f", {context}"
+        raise ce
 
+control_type_bij = Bijection('str', 'enum', [('wheel', ControlType.WHEEL), ('drag', ControlType.DRAG)])
+
+
+#TODO: rename Control
 class Controller:
-    def __init__(self, type_, i, x, y, speed_multiplier=None):
+    def __init__(self, type_, i, x, y, m):
         self.type_ = type_
         self.i = i
         self.x = x
         self.y = y
-        self.speed_multiplier = speed_multiplier
+        self.m = m
 
     def __eq__(self, other):
         return self.i == other.i
 
+    @staticmethod
+    def parse(d, i, default_wheel_speed, default_drag_speed, default_type, context):
+        try:
+            x_s = expect_value(d, "x")
+            x = expect_decimal(x_s)
+
+            y_s = expect_value(d, "y")
+            y = expect_decimal(y_s)
+
+            type_= maybe(dc.get('type'), control_type_bij.enum, default_type)
+        
+            m = maybe(dc.get('m'), expect_float, 1.0)
+
+            return Controller(type_, i, x, y, m)
+
+        except ConfigError as ce:
+            ce.msg = ce.msg + f", {context}"
+            raise ce
 
 def maybe(mv, f, default):
     if mv is None:
@@ -131,33 +188,44 @@ class Instrument:
         self.controllers = controllers
 
     @staticmethod
-    def load(path):
-        with open(path, 'r') as f:
-            d = yaml.safe_load(f.read())
-        dim = d["dimensions"]
-        box = Box(0, dim["width"], 0, dim["height"])
+    def load(path, context):
+        try:
+            with open(path, 'r') as f:
+                d = tomlkit.load(f)
+
+            dimensions = expect_value(d, 'dimensions')
+            width_s = expect_value(dimensions, 'width')
+            width = expect_decimal(width_s)
+            height_s = expect_value(dimensions, 'height')
+            height = expect_decimal(height_s)
+
+            box = Box(0, width, 0, height)
+
+            dc = expect_value(d, 'default_control')
+            type_s = expect_value(dc, "type")
+            default_type = control_type_bij.enum(type_s)
+
+            wheel_speed_s = expect_value(dc, "wheel_speed")
+            default_wheel_speed = in_context(lambda: expect_float(wheel_speed_s), 'wheel_speed')
+
+            drag_speed_s = expect_value(dc, "drag_speed")
+            default_drag_speed = in_context(lambda: expect_float(drag_speed_s), 'drag_speed')
 
 
-        cdef = d.get('controller')
-        if cdef is None:
-            raise ConfigError('controller is not defined')
-        default_type = parse_controller_type(cdef['type'])
+            controls = expect_value(d, 'controls')
+            for control_id, v in controls.items():
+                context = "for control {control_id}"
+                c = Controller.parse(v, context)
+                controls.append(c)
 
+            window = expect_value(d, 'window')
+            pattern = expect_value(window, 'contains')
 
-        controllers = []
-        for g in d["controllers"]:
-            mspeed = g.get('speed')
-            if mspeed is not None:
-                speed = int(mspeed)
-            else:
-                speed = None
+            return Instrument(pattern, box, controls)
 
-            type_ = maybe(g.get('type'), parse_controller_type, default_type)
-            c = Controller(type_, int(g['i']), int(g["x"]), int(g["y"]), speed)
+        except ConfigError as ce:
+            raise ConfigError(ce.msg + f", {context}")
 
-            controllers.append(c)
-        pattern = d['window_title_pattern']
-        return Instrument(pattern, box, controllers)
 
     def find_closest_controller(self, mx, my):
         c_best = None
@@ -169,23 +237,26 @@ class Instrument:
                 d_best = d
         return c_best
 
-def analyze(filename, marker_color=(255, 0, 255, 255)):
+def analyze(doc, filename, marker_color=(255, 0, 255, 255)):
     im = Image.open(filename)
-    def f(i, p):
-        x, y = p
-        return {"i": i, "x": x, "y": y}
 
-    controllers = [f(i, b.center()) for i, b in enumerate(find_markings(im, marker_color))]
-    b = make_box(0, 0, im.width, im.height) 
-    d = {
-        "dimensions" : {
-            "width": im.width,
-            "height": im.height
-        },
-        "controllers": controllers
-    }
-    return d
-    # return Model(b, markings)
+    dimensions = tomlkit.table()
+    dimensions.add('width', im.width)
+    dimensions.add('height', im.height)
+    doc.add('dimensions', dimensions)
+
+    controls = tomlkit.table()
+    for i, box in enumerate(find_markings(im, marker_color)):
+        x, y = box.center()
+        c = tomlkit.table() 
+        c.add('x', x)
+        c.add('y', y)
+        c.add('m', 1.0)
+        controls.add(f'c{i+1}', c)
+
+    doc.add('controls', controls)
+
+    return doc
 
 def fmt_hex(i):
     s = hex(i)[2:].upper()
@@ -292,14 +363,14 @@ class Dispatcher(threading.Thread):
         while running:
             item = self.queue.get()
             cmd = item[0]
-            if cmd == Command.QUIT:
+            if cmd == InternalCommand.QUIT:
                 running = False
-            elif cmd == Command.CHANGE_MIDI_CHANNEL:
+            elif cmd == InternalCommand.CHANGE_MIDI_CHANNEL:
                 if item[1] == 0:
                     self.midi_channel = None
                 else:
                     self.midi_channel = item[1] - 1
-            elif cmd == Command.UPDATE_WINDOW:
+            elif cmd == InternalCommand.UPDATE_WINDOW:
                 name = item[1]
                 window = item[2]
                 if window is None:
@@ -315,9 +386,26 @@ class Dispatcher(threading.Thread):
                     self.frame.set_window_text(c.window.name)
 
 
-def main_analyze():
-    # return analyze("instruments/tal-jupiter.png")
-    return analyze("instruments/prophet-5-v-marked.png")
+def generate_instrument(outfile, screenshot_file, window_contains, control_type_s):
+    doc = tomlkit.document()
+
+    doc.add(tomlkit.comment('This instrument configuration file is of TOML format (https://toml.io). See the pointer-cc documentation for details.'))
+
+    window = tomlkit.table()
+    window.add('contains', window_contains)
+
+    doc.add('window', window)
+
+    default_control = tomlkit.table()
+    default_control.add('type', control_type_s)
+    default_control.add('wheel_speed', 1.0)
+    default_control.add('drag_speed', 1.0)
+    doc.add('default_control', default_control)
+
+    analyze(doc, screenshot_file)
+
+    with open(outfile, 'w') as f:
+        f.write(doc.as_string())
 
 # affine transform that can be scaling and translation
 class Affine:
@@ -544,7 +632,7 @@ class MainWindow(wx.Frame):
         open_directory(datadir())
 
     def on_close(self, event):
-        self.queue.put((Command.QUIT, None))
+        self.queue.put((InternalCommand.QUIT, None))
         wx.GetApp().ExitMainLoop()
         event.Skip()
 
@@ -572,7 +660,7 @@ class MainWindow(wx.Frame):
 
     def handle_channel_choice(self, event):
         i = event.GetInt()
-        self.queue.put((Command.CHANGE_MIDI_CHANNEL, i))
+        self.queue.put((InternalCommand.CHANGE_MIDI_CHANNEL, i))
 
 
 def matches_name(window, name_pattern):
@@ -632,13 +720,13 @@ class WindowPolling(threading.Thread):
             windows = get_windows_mac(self.patterns)
             for name, window in windows.items():
                 if self.windows.get(name) != windows[name]:
-                    self.queue.put((Command.UPDATE_WINDOW, name, windows[name]))
+                    self.queue.put((InternalCommand.UPDATE_WINDOW, name, windows[name]))
                     self.windows[name] = windows[name]
 
             todelete = []
             for name in self.windows:
                 if windows.get(name) is None:
-                    self.queue.put((Command.UPDATE_WINDOW, name, None))
+                    self.queue.put((InternalCommand.UPDATE_WINDOW, name, None))
                     todelete.append(name)
 
             for name in todelete:
@@ -648,26 +736,97 @@ class WindowPolling(threading.Thread):
             if self.event.is_set():
                 running = False
 
+
+def default_config():
+    doc = tomlkit.document()
+
+    doc.add(tomlkit.comment('The pointer-cc configuration file is of TOML format (https://toml.io). See the pointer-cc documentation for details.'))
+
+    bindings = tomlkit.table()
+
+    t1 = tomlkit.table()
+    t1.add('command', 'pan-x')
+    t1.add('cc', 77)
+    bindings.add('1', t1)
+
+    t2 = tomlkit.table()
+    t2.add('command', 'pan-y')
+    t2.add('cc', 78)
+    bindings.add('2', t2)
+
+    t3 = tomlkit.table()
+    t3.add('command', 'adjust-control')
+    t3.add('cc', 79)
+    bindings.add('3', t3)
+
+    t4 = tomlkit.table()
+    t4.add('command', 'freewheel')
+    t4.add('cc', 80)
+    bindings.add('4', t4)
+
+    doc.add('bindings', bindings)
+    return doc
+
+Command = Enum('Command', ['PAN_X', 'PAN_X_INV', 'PAN_Y', 'PAN_Y_INV', 'ADJUST_CONTROL', 'FREEWHEEL'])
+
+cmd_str = Bijection('command', 'str', [(Command.PAN_X, 'pan-x'),
+                                       (Command.PAN_X_INV, 'pan-x-inv'),
+                                       (Command.PAN_Y, 'pan-y'),
+                                       (Command.PAN_Y_INV, 'pan-y-inv'),
+                                       (Command.ADJUST_CONTROL, 'adjust-control'),
+                                       (Command.FREEWHEEL, 'freewheel')
+                                       ])
+
+class Binding:
+    def __init__(self, command, cc):
+        self.command = command
+        self.cc = cc
+
+    @staticmethod
+    def parse(d, context):
+        try:
+            command_name = expect_value(d, 'command')
+            cmd = cmd_str.command(command_name)
+            cc_s = expect_value(d, 'cc')
+            cc = expect_decimal(cc_s)
+            return Binding(cmd, cc)
+        except ConfigError as ce:
+            ce.msg = ce.msg + f", {context}"
+            raise ce
+
+def expect_value(d, k):
+    v = d.get(k)
+    if v is not None:
+        return v
+    else:
+        raise ConfigError(f'Expected key: \"{k}\"')
+
+def expect_float(v):
+    try:
+        float(v)
+    except:
+        raise ConfigError(f'Not a float: \"{str(v)}\"')
+
+def expect_decimal(s):
+    try:
+        int(s)
+    except:
+        raise ConfigError(f"Not a decimal: \"{s}\"")
+
 class Config:
-    def __init__(self, pan_x_cc, pan_y_cc, control_cc, freewheel_cc):
-        self.pan_x_cc = pan_x_cc
-        self.pan_y_cc = pan_y_cc
-        self.control_cc = control_cc
-        self.freewheel_cc = freewheel_cc
+    def __init__(self, bindings):
+        self.bindings = bindings
 
     @staticmethod
     def load(path):
+        result = []
         with open(path, 'r') as f:
-            d = yaml.safe_load(f.read())
-        pan_x_cc = d['pan_x']['cc']
-        pan_y_cc = d['pan_y']['cc']
-        control_cc = d['control']['cc']
-        freewheel_cc = d['freewheel']['cc']
-        return Config(pan_x_cc, pan_y_cc, control_cc, freewheel_cc)
-
-def main_2():
-    d = main_analyze()
-    print(yaml.dump(d, sort_keys=False))
+            d = tomlkit.load(f)
+            bindings = expect_value(d, 'bindings')
+            for bi, b in bindings.items():
+                bing = Binding.parse(b, f'parsing binding \"{bi}\"')
+                result.append(bing)
+            return Config(result)
 
 def load_instruments():
     root_dir = datadir()
@@ -675,7 +834,7 @@ def load_instruments():
     d = {}
     for filename in filenames:
         p = os.path.join(root_dir, filename)
-        inst = Instrument.load(p)
+        inst = Instrument.load(p, filename)
         d[inst.pattern] = inst
     return d
 
@@ -725,5 +884,13 @@ def main():
 
     dispatcher.join()
 
+
+def main_analyze():
+    generate_instrument('instruments/inst-tal-j-8.txt', 'instruments/tal-jupiter.png', 'TAL-J-8', 'wheel')
+    generate_instrument('instruments/inst-prophet-5-v.txt', 'instruments/prophet-5-v-marked.png', 'Prophet-5 V', 'drag')
+
+
+
 if __name__ == '__main__':
+    # main_analyze()
     main()

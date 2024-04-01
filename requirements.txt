@@ -33,3 +33,4 @@ tomli==2.0.1
 traitlets==5.14.2
 wcwidth==0.2.13
 wxPython==4.2.1
+tomlkit==0.12.4

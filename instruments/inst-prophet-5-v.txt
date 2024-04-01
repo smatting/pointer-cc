@@ -1,29 +1,49 @@
-name: Prophet-5 V
-window_title_pattern: Prophet-5 V
-controller:
-  type: drag
-dimensions:
-  width: 1437
-  height: 704
-controllers:
-- i: 0
-  x: 374
-  y: 121
-- i: 1
-  x: 535
-  y: 123
-- i: 2
-  x: 435
-  y: 136
-- i: 3
-  x: 475
-  y: 136
-- i: 4
-  x: 374
-  y: 210
-- i: 5
-  x: 437
-  y: 210
-- i: 6
-  x: 497
-  y: 223
+# This instrument configuration file is of TOML format (https://toml.io). See the pointer-cc documentation for details.
+
+[window]
+contains = "Prophet-5 V"
+
+[default_control]
+type = "drag"
+wheel_speed = 1.0
+drag_speed = 1.0
+
+[dimensions]
+width = 1437
+height = 704
+
+[controls]
+[controls.c1]
+x = 374
+y = 121
+m = 1.0
+
+[controls.c2]
+x = 535
+y = 123
+m = 1.0
+
+[controls.c3]
+x = 435
+y = 136
+m = 1.0
+
+[controls.c4]
+x = 475
+y = 136
+m = 1.0
+
+[controls.c5]
+x = 374
+y = 210
+m = 1.0
+
+[controls.c6]
+x = 437
+y = 210
+m = 1.0
+
+[controls.c7]
+x = 497
+y = 223
+m = 1.0
