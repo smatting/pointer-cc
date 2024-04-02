@@ -481,8 +481,6 @@ class MouseController:
         self.last_controller_turned = None
         self.last_cc = None
         self.last_controller_accum = 0.0
-        self.last_turn_screen_x = 0
-        self.last_turn_screen_y = 0
         self.dragging = False
 
         
@@ -518,8 +516,6 @@ class MouseController:
             if self.last_controller_turned != self.current_controller:
                 self.last_cc = cc
                 self.last_controller_accum = 0.0
-                self.last_turn_screen_x = screen_x
-                self.last_turn_screen_y = screen_y
 
         if self.last_cc is None:
             self.last_cc = cc
@@ -554,8 +550,6 @@ class MouseController:
 
         self.last_controller_turned = self.current_controller
         self.last_cc = cc
-        self.last_turn_screen_x = screen_x
-        self.last_turn_screen_y = screen_y
 
     def freewheel(self):
         self.freewheeling = True
