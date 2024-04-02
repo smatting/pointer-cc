@@ -3,6 +3,7 @@ from PIL import Image
 import wx
 import time
 import os
+import time
 import webbrowser
 import subprocess
 import platform
@@ -126,7 +127,7 @@ def find_markings(im, marker_color):
         spans_last = spans
     return boxes
 
-ControlType = Enum('ControlType', ['WHEEL', 'DRAG'])
+ControlType = Enum('ControlType', ['WHEEL', 'DRAG','CLICK'])
 
 
 class ConfigError(Exception):
@@ -141,7 +142,7 @@ def in_context(f, context):
         ce.msg = ce.msg + f", {context}"
         raise ce
 
-control_type_bij = Bijection('str', 'enum', [('wheel', ControlType.WHEEL), ('drag', ControlType.DRAG)])
+control_type_bij = Bijection('str', 'enum', [('wheel', ControlType.WHEEL), ('drag', ControlType.DRAG), ('click', ControlType.CLICK)])
 
 
 #TODO: rename Control
@@ -482,7 +483,8 @@ class MouseController:
         self.last_cc = None
         self.last_controller_accum = 0.0
         self.dragging = False
-
+        
+        self.click_sm = ClickStateMachine(0.5, 2)
         
     def set_window(self, window):
         window_box = window.box
@@ -510,6 +512,7 @@ class MouseController:
         
         if self.last_controller_turned is not None:
             if self.last_controller_turned != self.current_controller:
+                self.click_sm.reset()
                 self.last_cc = cc
                 self.last_controller_accum = 0.0
 
@@ -543,6 +546,10 @@ class MouseController:
                     mouse.press()
                     self.dragging = True
                 mouse.move(screen_x, screen_y - k_whole)
+            elif self.current_controller.type_ == ControlType.CLICK:
+                is_click = self.click_sm.on_cc(cc, time.time())
+                print('is_click', is_click, repr(self.click_sm))
+
 
         self.last_controller_turned = self.current_controller
         self.last_cc = cc
@@ -782,6 +789,80 @@ cmd_str = Bijection('command', 'str', [(Command.PAN_X, 'pan-x'),
                                        (Command.FREEWHEEL, 'freewheel')
                                        ])
 
+class ClickStateMachine:
+    def __init__(self, timeout_secs, delta_cc):
+        self.setting_timeout_secs = timeout_secs
+        self.setting_delta_cc = delta_cc
+
+        self.start_cc = None
+        self.start_t = None
+        self.down_cc = None
+        self.isdown = False
+
+
+    def __repr__(self):
+        return str((self.start_cc, self.start_t, self.down_cc, self.isdown))
+
+    def on_time(self, t):
+        return self.on_cc(None, t)
+
+    def reset(self):
+        self.start_cc = None
+        self.start_t = None
+        self.down_cc = None
+        self.isdown = False
+
+    def on_cc(self, cc_value, t):
+        '''
+        cc_value may be empty
+        '''
+        event_start = False
+        event_timeout = False
+        event_moveup = False
+        event_movedown = False
+        event_click = False
+
+        # self.start_cc state machine
+        if self.start_cc is None:
+            if cc_value is not None:
+                event_start = True
+                self.start_cc = cc_value
+                self.start_t = t
+        else:
+            if t - self.start_t > self.setting_timeout_secs:
+                self.start_cc = None
+                event_timeout = True
+            if self.start_cc is not None:
+                if cc_value is not None:
+                    if cc_value <= self.start_cc - self.setting_delta_cc:
+                        event_movedown = True
+
+        # self.down_cc state machine
+        if self.down_cc is None:
+            if event_movedown and cc_value is not None:
+                self.down_cc = cc_value
+        else:
+            if event_timeout:
+                self.down_cc = None
+            if cc_value is not None and self.down_cc is not None:
+                if cc_value >= self.down_cc + self.setting_delta_cc:
+                    event_moveup = True
+
+        # self.isup state machine
+        if not self.isdown:
+            if event_movedown:
+                self.isdown = True
+        else:
+            if event_moveup:
+                event_click = True
+            if event_timeout:
+                self.isown = False
+
+        if event_click:
+            self.reset()
+
+        return event_click
+
 class Binding:
     def __init__(self, command, cc):
         self.command = command
@@ -851,8 +932,6 @@ def open_directory(path):
     else:
         subprocess.Popen(["xdg-open", path])
 
-
-#
 def request_access():
     Quartz.CGRequestPostEventAccess()
     Quartz.CGRequestScreenCaptureAccess()
@@ -889,12 +968,9 @@ def main():
 
     dispatcher.join()
 
-
 def main_analyze():
     generate_instrument('instruments/inst-tal-j-8.txt', 'instruments/tal-jupiter.png', 'TAL-J-8', 'wheel')
     generate_instrument('instruments/inst-prophet-5-v.txt', 'instruments/prophet-5-v-marked.png', 'Prophet-5 V', 'drag')
-
-
 
 if __name__ == '__main__':
     # main_analyze()
