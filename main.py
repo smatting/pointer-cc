@@ -146,11 +146,12 @@ control_type_bij = Bijection('str', 'enum', [('wheel', ControlType.WHEEL), ('dra
 
 #TODO: rename Control
 class Controller:
-    def __init__(self, type_, i, x, y, m):
+    def __init__(self, type_, i, x, y, speed, m):
         self.type_ = type_
         self.i = i
         self.x = x
         self.y = y
+        self.speed = speed
         self.m = m
 
     def __eq__(self, other):
@@ -168,7 +169,13 @@ class Controller:
             type_= maybe(d.get('type'), control_type_bij.enum, default_type)
         
             m = maybe(d.get('m'), expect_float, 1.0)
-            return Controller(type_, i, x, y, m)
+
+            if type_ == ControlType.WHEEL:
+                speed = default_wheel_speed
+            else:
+                speed = default_drag_speed
+
+            return Controller(type_, i, x, y, speed, m)
 
         except ConfigError as ce:
             ce.msg = ce.msg + f", {context}"
@@ -211,7 +218,6 @@ class Instrument:
 
             drag_speed_s = expect_value(dc, "drag_speed")
             default_drag_speed = in_context(lambda: expect_float(drag_speed_s), 'drag_speed')
-
 
             controls_unparsed = expect_value(d, 'controls')
             for control_id, v in controls_unparsed.items():
@@ -528,18 +534,10 @@ class MouseController:
                 self.freewheeling_direction = None
 
         else:
-            # TODO
-            speed = 1.46
-
             if self.current_controller is not None:
                 m = self.current_controller.m
-                if m is not None:
-                    if m != 1.0:
-                        print(m)
-                    speed *= m
+                speed = self.current_controller.speed * self.current_controller.m
 
-            print('delta', delta)
-            print('delta * speed', delta * speed)
             self.last_controller_accum += delta * speed
             k_whole = int(self.last_controller_accum)
             self.last_controller_accum -= k_whole

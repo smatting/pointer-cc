@@ -3,7 +3,8 @@ TODOS:
 - [x] free MIDI bindings
 - [x] add support for drag-controlled vsts
 - [x] fix bug: drag moves the pointer
-- [ ] respect default speeds
+- [x] respect default speeds
+- [ ] implement click
 - auto-connect MIDI
 - make image analysis available in GUI
 - write documentation
