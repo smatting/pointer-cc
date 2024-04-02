@@ -1,0 +1,489 @@
+# This instrument configuration file is of TOML format (https://toml.io). See the pointer-cc documentation for details.
+
+[window]
+contains = "TAL-J-8"
+
+[default_control]
+type = "wheel"
+wheel_speed = 1.0
+drag_speed = 1.0
+
+[dimensions]
+width = 1439
+height = 736
+
+[controls]
+[controls.c1]
+x = 1074
+y = 172
+m = 1.0
+
+[controls.c2]
+x = 1033
+y = 177
+m = 1.0
+
+[controls.c3]
+x = 426
+y = 182
+m = 1.0
+
+[controls.c4]
+x = 352
+y = 183
+m = 1.0
+
+[controls.c5]
+x = 960
+y = 183
+m = 1.0
+
+[controls.c6]
+x = 1215
+y = 183
+m = 1.0
+
+[controls.c7]
+x = 1293
+y = 183
+m = 1.0
+
+[controls.c8]
+x = 304
+y = 184
+m = 1.0
+
+[controls.c9]
+x = 550
+y = 184
+m = 1.0
+
+[controls.c10]
+x = 592
+y = 184
+m = 1.0
+
+[controls.c11]
+x = 876
+y = 184
+m = 1.0
+
+[controls.c12]
+x = 1136
+y = 184
+m = 1.0
+
+[controls.c13]
+x = 503
+y = 185
+m = 1.0
+
+[controls.c14]
+x = 670
+y = 185
+m = 1.0
+
+[controls.c15]
+x = 718
+y = 185
+m = 1.0
+
+[controls.c16]
+x = 802
+y = 185
+m = 1.0
+
+[controls.c17]
+x = 1378
+y = 185
+m = 1.0
+
+[controls.c18]
+x = 242
+y = 194
+m = 1.0
+
+[controls.c19]
+x = 42
+y = 206
+m = 1.0
+
+[controls.c20]
+x = 116
+y = 206
+m = 1.0
+
+[controls.c21]
+x = 191
+y = 206
+m = 1.0
+
+[controls.c22]
+x = 426
+y = 228
+m = 1.0
+
+[controls.c23]
+x = 425
+y = 253
+m = 1.0
+
+[controls.c24]
+x = 736
+y = 254
+m = 1.0
+
+[controls.c25]
+x = 43
+y = 316
+m = 1.0
+
+[controls.c26]
+x = 117
+y = 316
+m = 1.0
+
+[controls.c27]
+x = 570
+y = 402
+m = 1.0
+
+[controls.c28]
+x = 1130
+y = 402
+m = 1.0
+
+[controls.c29]
+x = 1388
+y = 402
+m = 1.0
+
+[controls.c30]
+x = 469
+y = 404
+m = 1.0
+
+[controls.c31]
+x = 417
+y = 412
+m = 1.0
+
+[controls.c32]
+x = 518
+y = 413
+m = 1.0
+
+[controls.c33]
+x = 371
+y = 414
+m = 1.0
+
+[controls.c34]
+x = 828
+y = 414
+m = 1.0
+
+[controls.c35]
+x = 1077
+y = 414
+m = 1.0
+
+[controls.c36]
+x = 305
+y = 415
+m = 1.0
+
+[controls.c37]
+x = 667
+y = 415
+m = 1.0
+
+[controls.c38]
+x = 782
+y = 415
+m = 1.0
+
+[controls.c39]
+x = 875
+y = 415
+m = 1.0
+
+[controls.c40]
+x = 938
+y = 415
+m = 1.0
+
+[controls.c41]
+x = 984
+y = 415
+m = 1.0
+
+[controls.c42]
+x = 1243
+y = 415
+m = 1.0
+
+[controls.c43]
+x = 1289
+y = 415
+m = 1.0
+
+[controls.c44]
+x = 1335
+y = 415
+m = 1.0
+
+[controls.c45]
+x = 621
+y = 416
+m = 1.0
+
+[controls.c46]
+x = 711
+y = 416
+m = 1.0
+
+[controls.c47]
+x = 1031
+y = 416
+m = 1.0
+
+[controls.c48]
+x = 1195
+y = 416
+m = 1.0
+
+[controls.c49]
+x = 40
+y = 521
+m = 1.0
+
+[controls.c50]
+x = 97
+y = 528
+m = 1.0
+
+[controls.c51]
+x = 1035
+y = 560
+m = 1.0
+
+[controls.c52]
+x = 555
+y = 561
+m = 1.0
+
+[controls.c53]
+x = 658
+y = 561
+m = 1.0
+
+[controls.c54]
+x = 985
+y = 561
+m = 1.0
+
+[controls.c55]
+x = 346
+y = 562
+m = 1.0
+
+[controls.c56]
+x = 451
+y = 562
+m = 1.0
+
+[controls.c57]
+x = 505
+y = 562
+m = 1.0
+
+[controls.c58]
+x = 608
+y = 562
+m = 1.0
+
+[controls.c59]
+x = 762
+y = 562
+m = 1.0
+
+[controls.c60]
+x = 865
+y = 562
+m = 1.0
+
+[controls.c61]
+x = 1184
+y = 562
+m = 1.0
+
+[controls.c62]
+x = 1287
+y = 562
+m = 1.0
+
+[controls.c63]
+x = 1342
+y = 562
+m = 1.0
+
+[controls.c64]
+x = 1390
+y = 562
+m = 1.0
+
+[controls.c65]
+x = 298
+y = 563
+m = 1.0
+
+[controls.c66]
+x = 401
+y = 563
+m = 1.0
+
+[controls.c67]
+x = 712
+y = 563
+m = 1.0
+
+[controls.c68]
+x = 815
+y = 563
+m = 1.0
+
+[controls.c69]
+x = 1134
+y = 563
+m = 1.0
+
+[controls.c70]
+x = 1237
+y = 563
+m = 1.0
+
+[controls.c71]
+x = 36
+y = 647
+m = 1.0
+
+[controls.c72]
+x = 74
+y = 648
+m = 1.0
+
+[controls.c73]
+x = 188
+y = 649
+m = 1.0
+
+[controls.c74]
+x = 224
+y = 649
+m = 1.0
+
+[controls.c75]
+x = 145
+y = 650
+m = 1.0
+
+[controls.c76]
+x = 663
+y = 677
+m = 1.0
+
+[controls.c77]
+x = 700
+y = 677
+m = 1.0
+
+[controls.c78]
+x = 601
+y = 679
+m = 1.0
+
+[controls.c79]
+x = 884
+y = 679
+m = 1.0
+
+[controls.c80]
+x = 1157
+y = 679
+m = 1.0
+
+[controls.c81]
+x = 1200
+y = 679
+m = 1.0
+
+[controls.c82]
+x = 517
+y = 680
+m = 1.0
+
+[controls.c83]
+x = 561
+y = 680
+m = 1.0
+
+[controls.c84]
+x = 1244
+y = 680
+m = 1.0
+
+[controls.c85]
+x = 1287
+y = 680
+m = 1.0
+
+[controls.c86]
+x = 290
+y = 681
+m = 1.0
+
+[controls.c87]
+x = 333
+y = 681
+m = 1.0
+
+[controls.c88]
+x = 754
+y = 681
+m = 1.0
+
+[controls.c89]
+x = 798
+y = 681
+m = 1.0
+
+[controls.c90]
+x = 841
+y = 681
+m = 1.0
+
+[controls.c91]
+x = 942
+y = 681
+m = 1.0
+
+[controls.c92]
+x = 986
+y = 681
+m = 1.0
+
+[controls.c93]
+x = 1029
+y = 681
+m = 1.0
+
+[controls.c94]
+x = 1073
+y = 682
+m = 1.0
+
+[controls.c95]
+x = 1116
+y = 682
+m = 1.0
