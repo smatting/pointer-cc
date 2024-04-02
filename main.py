@@ -498,10 +498,6 @@ class MouseController:
         self.current_controller = self.move_pointer_to_closest()
 
     def pan_y(self, y_normed):
-        # TODO: make this configurable
-        invert = True
-        if invert:
-            y_normed = 1.0 - y_normed
         self.my = self.model.box.height * y_normed
         self.current_controller = self.move_pointer_to_closest()
 
