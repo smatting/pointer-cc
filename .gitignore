@@ -4,3 +4,5 @@ venv*
 dist
 build
 datadir
+instruments/*.png
+instruments/*.xcf
