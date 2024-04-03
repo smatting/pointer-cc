@@ -882,6 +882,9 @@ class ClickStateMachine:
             if event_movedown and cc_value is not None:
                 self.down_cc = cc_value
         else:
+            if cc_value < self.down_cc:
+                self.down_cc = cc_value
+
             if event_timeout:
                 self.down_cc = None
             if cc_value is not None and self.down_cc is not None:
