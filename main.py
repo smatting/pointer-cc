@@ -279,7 +279,7 @@ class Dispatcher(threading.Thread):
         self.queue = queue
         self.frame = frame
 
-        midi_channel= None
+        midi_channel= 0
         if config.preferred_midi_channel is not None:
             midi_channel = config.preferred_midi_channel
         self.midi_channel = midi_channel
@@ -321,7 +321,7 @@ class Dispatcher(threading.Thread):
 
             ch = message[0] & 0x0f
             ignore = False
-            if self.midi_channel is not None:
+            if self.midi_channel != 0:
                 if ch != self.midi_channel - 1:
                     return
     
