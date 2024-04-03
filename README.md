@@ -9,7 +9,7 @@ TODOS:
 - make image analysis available in GUI
 - write documentation
 - Sign app with developer id
-- remove yaml
+- [x] remove yaml
 - [x] logo
 - create video
 - windows version 

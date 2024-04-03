@@ -8,7 +8,6 @@ import time
 import webbrowser
 import subprocess
 import platform
-import yaml
 import glob
 import rtmidi
 import math
