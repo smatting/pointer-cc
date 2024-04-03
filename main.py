@@ -27,7 +27,7 @@ app_name = "pointer-cc"
 app_author = "smatting"
 app_url = "https://github.com/smatting/pointer-cc/"
 
-InternalCommand = Enum('InternalCommand', ['QUIT', 'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW'])
+InternalCommand = Enum('InternalCommand', ['QUIT', 'CHANGE_MIDI_PORT',  'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW'])
 
 class Bijection:
     def __init__(self, a_name, b_name, atob_pairs):
@@ -372,18 +372,36 @@ class Dispatcher(threading.Thread):
             traceback.print_exception(e)
 
     def run(self):
-        self.midiin.set_callback(self)
         running = True
         while running:
             item = self.queue.get()
             cmd = item[0]
             if cmd == InternalCommand.QUIT:
                 running = False
+
             elif cmd == InternalCommand.CHANGE_MIDI_CHANNEL:
                 if item[1] == 0:
                     self.midi_channel = None
                 else:
                     self.midi_channel = item[1] - 1
+
+            elif cmd == InternalCommand.CHANGE_MIDI_PORT:
+                ports = self.midiin.get_ports()
+                port_name = item[1]
+
+                port_index = None
+                try:
+                    port_index = ports.index(port_name)
+                except ValueError:
+                    pass
+
+                if port_index is not None:
+
+                    if self.midiin.is_port_open():
+                        self.midiin.close_port()
+                    self.midiin.open_port(port_index)
+                    self.midiin.set_callback(self)
+
             elif cmd == InternalCommand.UPDATE_WINDOW:
                 name = item[1]
                 window = item[2]
@@ -575,16 +593,17 @@ class MouseController:
 
 
 class MainWindow(wx.Frame):
-    def __init__(self, parent, title, q, ports, midiin):
+    def __init__(self, parent, title, q, midiin):
         wx.Frame.__init__(self, parent, title=title, size=(200, -1))
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
 
         self.queue = q
-        self.midiin = midiin
 
-        self.ports = ports
+        self.midiin = midiin
+        self.ports = midiin.get_ports()
+
         self.port_dropdown = wx.ComboBox(self, id=wx.ID_ANY, choices=self.ports, style=wx.CB_READONLY)
 
         self.connect_button = wx.Button(self, label="Connect")
@@ -663,12 +682,7 @@ class MainWindow(wx.Frame):
 
     def handle_connect_click(self, event):
         v = self.port_dropdown.GetValue()
-        if v is not None:
-            try:
-                i = self.ports.index(v)
-                self.midiin.open_port(i)
-            except ValueError:
-                pass
+        self.queue.put((InternalCommand.CHANGE_MIDI_PORT, v))
 
     def handle_channel_choice(self, event):
         i = event.GetInt()
@@ -949,9 +963,7 @@ def main():
     app = wx.App(False)
 
     midiin = rtmidi.MidiIn()
-    ports = midiin.get_ports()
-
-    frame = MainWindow(None, "pointer-cc", q, ports, midiin)
+    frame = MainWindow(None, "pointer-cc", q, midiin)
 
     instruments = load_instruments()
 
