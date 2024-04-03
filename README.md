@@ -4,8 +4,8 @@ TODOS:
 - [x] add support for drag-controlled vsts
 - [x] fix bug: drag moves the pointer
 - [x] respect default speeds
-- [ ] implement click
-- auto-connect MIDI
+- [x] implement click
+- [x] auto-connect MIDI
 - make image analysis available in GUI
 - write documentation
 - Sign app with developer id
