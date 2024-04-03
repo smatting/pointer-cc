@@ -10,7 +10,7 @@ TODOS:
 - write documentation
 - Sign app with developer id
 - remove yaml
-- logo
+- [x] logo
 - create video
 - windows version 
 - Rename controllers to controls

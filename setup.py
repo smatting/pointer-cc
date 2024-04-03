@@ -12,6 +12,7 @@ setup(
     packages=find_packages(),
     options = {
         "py2app": {
+            "iconfile": "resources/icon.icns"
         }
     }
 )
