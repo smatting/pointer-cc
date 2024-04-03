@@ -566,7 +566,8 @@ class MouseController:
                 mouse.move(screen_x, screen_y - k_whole)
             elif self.current_controller.type_ == ControlType.CLICK:
                 is_click = self.click_sm.on_cc(cc, time.time())
-                print('is_click', is_click, repr(self.click_sm))
+                if is_click:
+                    mouse.click()
 
 
         self.last_controller_turned = self.current_controller
