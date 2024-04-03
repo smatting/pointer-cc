@@ -282,7 +282,6 @@ class Dispatcher(threading.Thread):
         midi_channel= None
         if config.preferred_midi_channel is not None:
             midi_channel = config.preferred_midi_channel
-            print(config.preferred_midi_channel)
         self.midi_channel = midi_channel
 
         self.instruments = instruments
