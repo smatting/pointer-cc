@@ -624,7 +624,7 @@ class MouseController:
 
 
 class MainWindow(wx.Frame):
-    def __init__(self, parent, title, q, ports, config):
+    def __init__(self, parent, title, q, ports, config, instruments):
         wx.Frame.__init__(self, parent, title=title, size=(200, -1))
 
         self.panel = wx.Panel(self, wx.ID_ANY)
@@ -698,7 +698,12 @@ class MainWindow(wx.Frame):
         sizer.Fit(self)
 
         self.update_view('(no MIDI received yet)', '')
-        self.set_window_text('(no window detected yet)')
+
+        if len(instruments) == 0:
+            msg_inital_msg = 'no instruments configured, please read docs'
+        else:
+            msg_inital_msg = f'{len(instruments)} instruments configured' 
+        self.set_window_text(msg_inital_msg)
 
         self.Show()
 
@@ -1067,9 +1072,9 @@ def main():
         if config.preferred_midi_port is not None:
             c = connect_to_port(midiin, config.preferred_midi_port)
 
-        frame = MainWindow(None, "pointer-cc", q, ports, config)
-
         instruments = load_instruments()
+
+        frame = MainWindow(None, "pointer-cc", q, ports, config, instruments)
 
         polling = WindowPolling(q, list(instruments.keys()))
         polling.start()

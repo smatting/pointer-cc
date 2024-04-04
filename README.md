@@ -11,7 +11,7 @@ TODOS:
 - Sign app with developer id
 - [x] remove yaml
 - [x] logo
-- warn user when no instruments are configured
+- [x] warn user when no instruments are configured
 - show nice config error messages, handle gracefully
 - rename last_controller_turned to last_controller(?)
 - create video
