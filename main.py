@@ -621,11 +621,78 @@ class MouseController:
         mouse.move(int(x), int(y))
         return c
 
+class CreateInstWindow(wx.Frame):
+    def __init__(self, parent, title):
+        wx.Frame.__init__(self, parent, title=title)
+        self.panel = wx.Panel(self, wx.ID_ANY)
 
+        self.filename_ctrl = wx.TextCtrl(self.panel, value="inst-changeme.txt")
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        filenameLabel = wx.StaticText(self.panel)
+        filenameLabel.SetLabelMarkup('<b>Filename</b>')
+        filenameDescr = wx.StaticText(self.panel)
+        filenameDescr.SetLabelMarkup('<i>Must start with "inst-" and end with ".txt"</i>')
+
+        topbottommargin = 50
+        intermargin = 25
+
+        sizer.AddSpacer(topbottommargin)
+        sizer.Add(filenameLabel)
+        sizer.Add(filenameDescr)
+        sizer.Add(self.filename_ctrl, 0, wx.EXPAND)
+        sizer.AddSpacer(intermargin)
+
+        windowPatternLabel = wx.StaticText(self.panel) 
+        windowPatternLabel.SetLabelMarkup('<b>Window Pattern</b>')
+        windowPatternDescr = wx.StaticText(self.panel, style=wx.LB_MULTIPLE)  
+        windowPatternDescr.SetLabelMarkup('<i>What string is in the window title? Is used to detect the instrument window.</i>')
+        self.window_pattern_ctrl = wx.TextCtrl(self.panel)
+        sizer.Add(windowPatternLabel, 0, wx.EXPAND)
+        sizer.Add(windowPatternDescr, 0, wx.EXPAND)
+        sizer.Add(self.window_pattern_ctrl, 0, wx.EXPAND)
+
+        sizer.AddSpacer(intermargin)
+
+        mouseControlLabel = wx.StaticText(self.panel) 
+        mouseControlLabel.SetLabelMarkup('<b>Mouse control</b>')
+        mouseControlDescr = wx.StaticText(self.panel) 
+        mouseControlDescr.SetLabelMarkup('<i>How does the mouse adjust controls?</i>')
+        sizer.Add(mouseControlLabel, 0, wx.EXPAND)
+        sizer.Add(mouseControlDescr, 0, wx.EXPAND)
+        choices = [
+            "mouse drag (up and down)",
+            "mouse wheel (prefer this if both are supported)"
+        ]
+        self.mousectrl_combo = wx.ComboBox(self.panel, id=wx.ID_ANY, choices=choices, style=wx.CB_READONLY)
+        sizer.Add(self.mousectrl_combo, 0, wx.EXPAND)
+
+        sizer.AddSpacer(intermargin)
+
+        controlPosLabel = wx.StaticText(self.panel) 
+        controlPosLabel.SetLabelMarkup('<b>Control positions</b>')
+        controlPosDescr = wx.StaticText(self.panel) 
+        controlPosDescr.SetLabelMarkup('<i>Take a screenshot of the instrument window. Crop the screen to contents,\nexclude all window decoration, e.g. the window title bar.\nThen mark the controls with rectangles in marker color</i>')
+        sizer.Add(controlPosLabel, 0, wx.EXPAND)
+        sizer.Add(controlPosDescr, 0, wx.EXPAND)
+
+        chooseScreenshotCtrl = wx.FilePickerCtrl(self.panel)
+        sizer.Add(chooseScreenshotCtrl, 0, wx.EXPAND)
+
+        sizer.AddSpacer(topbottommargin)
+
+        margin = 50
+        outer_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        outer_sizer.AddSpacer(margin)
+        outer_sizer.Add(sizer, 1, wx.EXPAND)
+        outer_sizer.AddSpacer(margin)
+
+        self.panel.SetSizer(outer_sizer)
+        sizer.Fit(self)
 
 class MainWindow(wx.Frame):
     def __init__(self, parent, title, q, ports, config, instruments):
-        wx.Frame.__init__(self, parent, title=title, size=(200, -1))
+        wx.Frame.__init__(self, parent, title=title)
 
         self.panel = wx.Panel(self, wx.ID_ANY)
 
@@ -1055,11 +1122,9 @@ def connect_to_port(midiin, port_name):
         return False
 
 def main():
-
     app = wx.App(True)
     try:
         initialize_config()
-
 
         config = Config.load(userfile('config.txt'))
 
@@ -1075,6 +1140,9 @@ def main():
         instruments = load_instruments()
 
         frame = MainWindow(None, "pointer-cc", q, ports, config, instruments)
+
+        w = CreateInstWindow(None, "Create instrument")
+        w.Show()
 
         polling = WindowPolling(q, list(instruments.keys()))
         polling.start()
