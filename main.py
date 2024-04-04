@@ -601,6 +601,8 @@ class MainWindow(wx.Frame):
     def __init__(self, parent, title, q, ports, config):
         wx.Frame.__init__(self, parent, title=title, size=(200, -1))
 
+        self.panel = wx.Panel(self, wx.ID_ANY)
+
         self.config = config
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -612,7 +614,7 @@ class MainWindow(wx.Frame):
         value = ""
         if config.preferred_midi_port is not None:
             value = config.preferred_midi_port
-        self.port_dropdown = wx.ComboBox(self, id=wx.ID_ANY, value=value, choices=self.ports, style=wx.CB_READONLY)
+        self.port_dropdown = wx.ComboBox(self.panel, id=wx.ID_ANY, value=value, choices=self.ports, style=wx.CB_READONLY)
         self.Bind(
             wx.EVT_COMBOBOX, self.handle_midi_port_choice, self.port_dropdown
         )
@@ -623,16 +625,14 @@ class MainWindow(wx.Frame):
             if 0 <= config.preferred_midi_channel and config.preferred_midi_channel < len(channel_choices):
                 value = channel_choices[config.preferred_midi_channel]
 
-        self.channel_dropdown = wx.ComboBox(self, id=wx.ID_ANY, value=value, choices=channel_choices, style=wx.CB_READONLY)
+        self.channel_dropdown = wx.ComboBox(self.panel, id=wx.ID_ANY, value=value, choices=channel_choices, style=wx.CB_READONLY)
         self.Bind(wx.EVT_COMBOBOX, self.handle_midi_channel_choice, self.channel_dropdown)
 
-        self.window_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
+        self.window_text_ctrl = wx.TextCtrl(self.panel, style=wx.TE_READONLY)
 
-        self.cc_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
+        self.ctrlinfo_text_ctrl = wx.TextCtrl(self.panel, style=wx.TE_READONLY)
 
-        self.freewheel_text = wx.StaticText(self, label="", style=wx.ALIGN_CENTER)
-
-        self.midi_msg_text = wx.StaticText(self, label="<no MIDI received yet>", style=wx.ALIGN_CENTER)
+        # self.midi_msg_text = wx.StaticText(self.panel, label="<no MIDI received yet>", style=wx.ALIGN_CENTER)
 
         filemenu= wx.Menu()
 
@@ -654,16 +654,28 @@ class MainWindow(wx.Frame):
         menuBar.Append(helpmenu,"&Help") # Adding the "filemenu" to the MenuBar
         self.SetMenuBar(menuBar)  # Adding the MenuBar to the Frame content.
 
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.Add(self.port_dropdown)
-        self.sizer.Add(self.channel_dropdown)
-        self.sizer.Add(self.window_text)
-        self.sizer.Add(self.freewheel_text)
-        self.sizer.Add(self.cc_text)
-        self.sizer.Add(self.midi_msg_text)
+        midiSizer = wx.BoxSizer(wx.HORIZONTAL)
+        midiSizer.Add(self.port_dropdown, 0, wx.ALL, 0)
+        midiSizer.Add(self.channel_dropdown, 0, wx.ALL, 0)
 
-        self.SetSizer(self.sizer)
-        self.SetAutoLayout(True)
+        self.midi_msg_ctrl = wx.TextCtrl(self.panel, style=wx.TE_READONLY)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # sizer.Add(self.port_dropdown)
+        # sizer.Add(self.channel_dropdown)
+        sizer.Add(self.window_text_ctrl, 0, wx.EXPAND)
+        sizer.Add(self.ctrlinfo_text_ctrl,  0, wx.EXPAND)
+        sizer.Add(midiSizer)
+        sizer.Add(self.midi_msg_ctrl, 0, wx.EXPAND)
+        # sizer.Add(self.midi_msg_text)
+
+        self.panel.SetSizer(sizer)
+        sizer.Fit(self)
+
+        self.update_view('(no MIDI received yet)', 'some knob')
+        self.set_window_text('(no window detected yet)')
+
+        # self.SetAutoLayout(True)
         self.Show()
 
     def on_help(self, event):
@@ -677,20 +689,17 @@ class MainWindow(wx.Frame):
         wx.GetApp().ExitMainLoop()
         event.Skip()
 
-    def update_view(self, midi_msg, cc_text):
-        self.midi_msg_text.SetLabel(midi_msg)
-        self.cc_text.SetLabel(cc_text)
+    def update_view(self, midi_msg, ctrlinfo):
+        self.midi_msg_ctrl.SetLabel(midi_msg)
+        self.ctrlinfo_text_ctrl.SetLabel(ctrlinfo)
 
     def set_window_text(self, text):
-        self.window_text.SetLabel(text)
-
-    def set_freewheel_text(self, text):
-        self.freewheel_text.SetLabel(text)
+        self.window_text_ctrl.SetLabel(text)
 
     def on_exit(self, event):
         self.Close()
 
-    def safe_preferred_midi(self):
+    def save_preferred_midi(self):
         midi_port = None
         midi_port_selected = self.port_dropdown.GetValue()
         if midi_port_selected != "":
@@ -706,12 +715,12 @@ class MainWindow(wx.Frame):
     def handle_midi_port_choice(self, event):
         v = self.port_dropdown.GetValue()
         self.queue.put((InternalCommand.CHANGE_MIDI_PORT, v))
-        self.safe_preferred_midi()
+        self.save_preferred_midi()
 
     def handle_midi_channel_choice(self, event):
         i = event.GetInt()
         self.queue.put((InternalCommand.CHANGE_MIDI_CHANNEL, i))
-        self.safe_preferred_midi()
+        self.save_preferred_midi()
 
 
 def matches_name(window, name_pattern):
@@ -1005,6 +1014,7 @@ def open_directory(path):
 def request_access():
     Quartz.CGRequestPostEventAccess()
     Quartz.CGRequestScreenCaptureAccess()
+    Quartz.CGPreflightScreenCaptureAccess()
 
 def connect_to_port(midiin, port_name):
     ports = midiin.get_ports()
