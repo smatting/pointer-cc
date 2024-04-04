@@ -38,20 +38,20 @@ class Bijection:
         setattr(self, b_name, self._b)
 
     def _a(self, b):
-        v = self._d_btoa[b]
-        if v is None:
-            knowns = ", ".join([f"\"{str(k)}\"" for k in self._d_btoa.keys()])
-            msg = f'Unknown value "{str(b)}", known values are: {knowns}.' 
-            raise ConfigError(msg)
+        return self._d_btoa.get(b)
+        # TODO: raise / handle config errors at call site
+        # if v is None:
+        #     knowns = ", ".join([f"\"{str(k)}\"" for k in self._d_btoa.keys()])
+        #     msg = f'Unknown value "{str(b)}", known values are: {knowns}.' 
+        #     raise ConfigError(msg)
         return v
 
     def _b(self, a):
-        v = self._d_atob[a]
-        if v is None:
-            knowns = ", ".join([f"\"{str(k)}\"" for k in self._d_atob.keys()])
-            msg = f'Unknown value "{str(a)}", known values are: {knowns}.' 
-            raise ConfigError(msg)
-        return v
+        return self._d_atob.get(a)
+        # if v is None:
+        #     knowns = ", ".join([f"\"{str(k)}\"" for k in self._d_atob.keys()])
+        #     msg = f'Unknown value "{str(a)}", known values are: {knowns}.' 
+        #     raise ConfigError(msg)
 
 def datadir():
     return appdirs.user_data_dir(app_name, app_author)
@@ -157,6 +157,10 @@ class Controller:
 
     def __eq__(self, other):
         return self.i == other.i
+
+    def __str__(self):
+        type_str = control_type_bij.str(self.type_)
+        return f'{self.i}({type_str})'
 
     @staticmethod
     def parse(d, i, default_wheel_speed, default_drag_speed, default_type, context):
@@ -266,10 +270,28 @@ def analyze(doc, filename, marker_color=(255, 0, 255, 255)):
 
     return doc
 
+
+midi_type_bij = Bijection('midi', 'display', [(0x80, "NOTEOFF"), (0x90, "NOTEON"), (0xA0, "KPRESS"), (0xB0, "CC"), (0xC0, "PROG"), (0xC0, "PROG"), (0xD0, "CHPRESS"), (0xE0, "PBEND"), (0xF0, "SYSEX")])
+
 def fmt_hex(i):
     s = hex(i)[2:].upper()
     prefix = "".join(((2 - len(s)) * ["0"]))
     return prefix + hex(i)[2:].upper()
+
+def fmt_midi(msg):
+    if len(msg) == 0:
+        return None
+    else:
+        parts = []
+        t = midi_type_bij.display(msg[0] & 0xf0)
+        if t is not None:
+            chan = (msg[0] & 0x0f) + 1
+            parts.append(f'Ch.{chan}')
+            parts.append(t)
+        else:
+            parts.append(fmt_hex(msg[0]))
+        parts = parts + [str(i) for i in msg[1:]]
+        return ' '.join(parts)
 
 class Dispatcher(threading.Thread):
     def __init__(self, midiin, queue, frame, instruments, config):
@@ -289,13 +311,6 @@ class Dispatcher(threading.Thread):
 
         if len(self.instruments) == 0:
             self.frame.set_window_text("No instruments configured, please read the docs")
-
-    def fmt_message(self, message, prefix):
-        input = (' '.join([fmt_hex(b) for b in message]))
-        input_dec = ' '.join([str(b) for b in message])
-        # chn = self.channels[self.current_channel]
-        # state = f'chn:{(chn.chn+1):02d} [{chn.instrument.name}] p:{chn.current_page}'
-        return (prefix + input + " dec: " + input_dec)
 
     def get_active_controller(self):
         if len(self.controllers) == 0:
@@ -326,30 +341,30 @@ class Dispatcher(threading.Thread):
     
             controller = self.get_active_controller()
 
-            midi_msg_text = self.fmt_message(message, "")
-
-            cc_text = ""
-            if controller:
-                if controller.current_controller is None:
-                    cc_text = ""
-                else:
-                    ms = controller.current_controller.m
-                    if ms is not None:
-                        s = f', speed: {ms}'
-                    else:
-                        s = ''
-                    cc_text = str(f"i: {controller.current_controller.i}" + s)
-
-            wx.CallAfter(self.frame.update_view, midi_msg_text, cc_text)
+            midi_msg_text_parts = []
+            m = fmt_midi(message)
+            if m is not None:
+                midi_msg_text_parts.append(m)
 
             # note off(?)
             if message[0] & 0xf0 == 0x80:
                 pass
 
+            ctrl_info_parts = []
             if controller:
+                if controller.current_controller is not None:
+                    ctrl_info_parts.append(str(controller.current_controller))
+
+                if controller.freewheeling:
+                    ctrl_info_parts.append('(freewheeling)')
+
                 if message[0] & 0xf0 == 0xb0:
                     for binding in self.config.bindings:
                         if binding.cc == message[1]:
+
+                            c = cmd_str.str(binding.command)
+                            midi_msg_text_parts.append(f'({c})')
+
                             if binding.command == Command.PAN_X:
                                 x_normed = message[2] / 127.0
                                 controller.pan_x(x_normed)
@@ -368,10 +383,16 @@ class Dispatcher(threading.Thread):
 
                             elif binding.command == Command.ADJUST_CONTROL:
                                 cc = message[2]
-                                controller.turn(cc)
+                                status = controller.turn(cc)
+                                if status is not None:
+                                    ctrl_info_parts.append(status)
 
                             elif binding.command == Command.FREEWHEEL:
                                 controller.freewheel()
+
+            ctrl_info = ' '.join(ctrl_info_parts)
+            midi_msg_text = ' '.join(midi_msg_text_parts)
+            wx.CallAfter(self.frame.update_view, midi_msg_text, ctrl_info)
 
         except Exception as e:
             traceback.print_exception(e)
@@ -526,6 +547,8 @@ class MouseController:
         self.current_controller = self.move_pointer_to_closest()
 
     def turn(self, cc):
+        status = None
+
         screen_x, screen_y = mouse.get_position()
         if not self.dragging:
             self.mx, self.my = self.screen_to_model.apply(screen_x, screen_y)
@@ -561,6 +584,7 @@ class MouseController:
 
             if self.current_controller.type_ == ControlType.WHEEL:
                 mouse.wheel(k_whole)
+                status = f'wheel! {"+" if k_whole > 0 else ""} (x{speed:.2f})'
             elif  self.current_controller.type_ == ControlType.DRAG:
                 if self.dragging:
                     pass
@@ -568,14 +592,16 @@ class MouseController:
                     mouse.press()
                     self.dragging = True
                 mouse.move(screen_x, screen_y - k_whole)
+                status = f'drag! {"+" if k_whole > 0 else ""}{k_whole} (x{speed:.2f})'
             elif self.current_controller.type_ == ControlType.CLICK:
                 is_click = self.click_sm.on_cc(cc, time.time())
                 if is_click:
                     mouse.click()
-
+                    status = f'click! (x{speed:.2f})'
 
         self.last_controller_turned = self.current_controller
         self.last_cc = cc
+        return status
 
     def freewheel(self):
         self.freewheeling = True
@@ -667,15 +693,13 @@ class MainWindow(wx.Frame):
         sizer.Add(self.ctrlinfo_text_ctrl,  0, wx.EXPAND)
         sizer.Add(midiSizer)
         sizer.Add(self.midi_msg_ctrl, 0, wx.EXPAND)
-        # sizer.Add(self.midi_msg_text)
 
         self.panel.SetSizer(sizer)
         sizer.Fit(self)
 
-        self.update_view('(no MIDI received yet)', 'some knob')
+        self.update_view('(no MIDI received yet)', '')
         self.set_window_text('(no window detected yet)')
 
-        # self.SetAutoLayout(True)
         self.Show()
 
     def on_help(self, event):
@@ -689,8 +713,8 @@ class MainWindow(wx.Frame):
         wx.GetApp().ExitMainLoop()
         event.Skip()
 
-    def update_view(self, midi_msg, ctrlinfo):
-        self.midi_msg_ctrl.SetLabel(midi_msg)
+    def update_view(self, midi, ctrlinfo):
+        self.midi_msg_ctrl.SetLabel(midi)
         self.ctrlinfo_text_ctrl.SetLabel(ctrlinfo)
 
     def set_window_text(self, text):
