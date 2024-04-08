@@ -626,9 +626,9 @@ class CreateInstWindow(wx.Frame):
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title)
 
-        topbottommargin = 50
+        topbottommargin = 25
         intermargin = 25
-        smallmargin = 5
+        smallmargin = 4
         horizontal_margin = 20
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -658,11 +658,16 @@ class CreateInstWindow(wx.Frame):
         sizer.AddSpacer(smallmargin)
         sizer.Add(cpSizer, 0, wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
-        chooseScreenshotCtrl = wx.FilePickerCtrl(self, message="Select a cropped screenshot of instrument", wildcard=".png")
+        chooseScreenshotCtrl = wx.FilePickerCtrl(self, style=wx.FLP_OPEN, message="Select a cropped screenshot of instrument", wildcard=".png")
         chooseScreenshotCtrl = chooseScreenshotCtrl 
         filepicker_set_button_label(chooseScreenshotCtrl, 'Analyze Screenshot')
-        chooseScreenshotCtrl.Fit()
-        sizer.Add(chooseScreenshotCtrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        # chooseScreenshotCtrl.Fit()
+
+        analyzeText = wx.StaticText(self, label="(no positions extracted yet)")
+        analyzeSizer = wx.BoxSizer(wx.HORIZONTAL)
+        analyzeSizer.Add(chooseScreenshotCtrl)
+        analyzeSizer.Add(analyzeText)
+        sizer.Add(analyzeSizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
 
         sizer.AddSpacer(intermargin)
 
@@ -697,7 +702,7 @@ class CreateInstWindow(wx.Frame):
         sizer.AddSpacer(intermargin)
 
         filenameDescr = wx.StaticText(self)
-        filenameDescr.SetLabelMarkup('<i>Choose instrument configuration save file.\nThe filename must start with "inst-" and end with ".txt".</i>')
+        filenameDescr.SetLabelMarkup('<i>Choose instrument configuration save file. The filename must start with "inst-" and end with ".txt".</i>')
         chooseSaveFile = wx.FilePickerCtrl(self, style=wx.FLP_SAVE, message="Save instrument text file", wildcard=".txt")
         filepicker_set_button_label(chooseSaveFile, 'Save Instrument')
         chooseSaveFile.SetInitialDirectory(datadir())
@@ -1170,7 +1175,7 @@ def main():
 
         frame = MainWindow(None, "pointer-cc", q, ports, config, instruments)
 
-        w = CreateInstWindow(None, "Create instrument")
+        w = CreateInstWindow(None, "Create Instrument")
         w.Show()
 
         polling = WindowPolling(q, list(instruments.keys()))
