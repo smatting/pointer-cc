@@ -2,6 +2,7 @@ import Quartz
 from PIL import Image
 import wx
 import time
+import textwrap
 import traceback
 import os
 import time
@@ -631,17 +632,26 @@ class CreateInstWindow(wx.Frame):
         horizontal_margin = 20
 
         sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.AddSpacer(topbottommargin)
+
+        introText = wx.StaticText(self)
+        t = textwrap.dedent('''\
+        Here you can create a instrument configuration .txt file for your VST / Software Instrument. 
+        After you've created it you need to edit the .txt file with a text editor to change the details
+        of each control, e.g. speed multiplier etc. Please read the pointer documentation on how to do this.
+        ''')
+        introText.SetLabelMarkup(t)
+        sizer.Add(introText, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
 
         controlPosLabel = wx.StaticText(self) 
         controlPosLabel.SetLabelMarkup('<b>Control positions</b>')
         controlPosDescr = wx.StaticText(self) 
-        controlPosDescr.SetLabelMarkup('<i>Take a screenshot of the instrument window. Crop the screen to contents, but\nexclude all window decoration, e.g. the window title bar.\nThen mark the controls by drawing rectangles  in the\nmarker color with any image app (e.g. GIMP).</i>')
+        controlPosDescr.SetLabelMarkup('<i>Take a screenshot of the instrument window. Crop the screen to contents, but\nexclude all window decoration, e.g. the window title bar or borders.\nThen mark the controls by drawing rectangles in the marker color with any image app (e.g. GIMP).</i>')
         cpLabel = wx.StaticText(self, label="Marker color #FF00FF, rgb(255,0,255)")
         colorPickerCtrl = wx.ColourPickerCtrl(self)
         cpSizer = wx.BoxSizer(wx.HORIZONTAL)
         cpSizer.Add(colorPickerCtrl, 0)
         cpSizer.Add(cpLabel, wx.SizerFlags().Bottom().Border(wx.LEFT, borderinpixels=smallmargin))
-        sizer.AddSpacer(topbottommargin)
         sizer.Add(controlPosLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
         sizer.Add(controlPosDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
@@ -689,7 +699,7 @@ class CreateInstWindow(wx.Frame):
         filenameDescr = wx.StaticText(self)
         filenameDescr.SetLabelMarkup('<i>Choose instrument configuration save file.\nThe filename must start with "inst-" and end with ".txt".</i>')
         chooseSaveFile = wx.FilePickerCtrl(self, style=wx.FLP_SAVE, message="Save instrument text file", wildcard=".txt")
-        filepicker_set_button_label(chooseSaveFile, 'Save As')
+        filepicker_set_button_label(chooseSaveFile, 'Save Instrument')
         chooseSaveFile.SetInitialDirectory(datadir())
 
         # filepicker_set_button_label(chooseSaveFile, 'Save &gt;')
@@ -697,6 +707,7 @@ class CreateInstWindow(wx.Frame):
         sizer.AddSpacer(smallmargin)
         sizer.Add(chooseSaveFile, 0, wx.CENTER | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(topbottommargin)
+
 
         self.SetSizer(sizer)
         self.Fit()
