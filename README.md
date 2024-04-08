@@ -12,6 +12,7 @@ TODOS:
 - [x] remove yaml
 - [x] logo
 - [x] warn user when no instruments are configured
+- [ ] case-insensitive window title matcher
 - show nice config error messages, handle gracefully
 - rename last_controller_turned to last_controller(?)
 - create video
