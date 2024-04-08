@@ -625,22 +625,35 @@ class CreateInstWindow(wx.Frame):
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title)
 
-        self.filename_ctrl = wx.TextCtrl(self, value="inst-changeme.txt")
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        filenameLabel = wx.StaticText(self)
-        filenameLabel.SetLabelMarkup('<b>Filename</b>')
-        filenameDescr = wx.StaticText(self)
-        filenameDescr.SetLabelMarkup('<i>Must start with "inst-" and end with ".txt"</i>')
-
         topbottommargin = 50
         intermargin = 25
+        smallmargin = 5
+        horizontal_margin = 20
 
-        horizontal_margin = 10
+        sizer = wx.BoxSizer(wx.VERTICAL)
 
+        controlPosLabel = wx.StaticText(self) 
+        controlPosLabel.SetLabelMarkup('<b>Control positions</b>')
+        controlPosDescr = wx.StaticText(self) 
+        controlPosDescr.SetLabelMarkup('<i>Take a screenshot of the instrument window. Crop the screen to contents, but\nexclude all window decoration, e.g. the window title bar.\nThen mark the controls by drawing rectangles  in the\nmarker color with any image app (e.g. GIMP).</i>')
+        cpLabel = wx.StaticText(self, label="Marker color #FF00FF, rgb(255,0,255)")
+        colorPickerCtrl = wx.ColourPickerCtrl(self)
+        cpSizer = wx.BoxSizer(wx.HORIZONTAL)
+        cpSizer.Add(colorPickerCtrl, 0)
+        cpSizer.Add(cpLabel, wx.SizerFlags().Bottom().Border(wx.LEFT, borderinpixels=smallmargin))
         sizer.AddSpacer(topbottommargin)
-        sizer.Add(filenameLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
-        sizer.Add(filenameDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
-        sizer.Add(self.filename_ctrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.Add(controlPosLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(smallmargin)
+        sizer.Add(controlPosDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(smallmargin)
+        sizer.Add(cpSizer, 0, wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(smallmargin)
+        chooseScreenshotCtrl = wx.FilePickerCtrl(self, message="Select a cropped screenshot of instrument", wildcard=".png")
+        chooseScreenshotCtrl = chooseScreenshotCtrl 
+        filepicker_set_button_label(chooseScreenshotCtrl, 'Analyze Screenshot')
+        chooseScreenshotCtrl.Fit()
+        sizer.Add(chooseScreenshotCtrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+
         sizer.AddSpacer(intermargin)
 
         windowPatternLabel = wx.StaticText(self) 
@@ -649,7 +662,9 @@ class CreateInstWindow(wx.Frame):
         windowPatternDescr.SetLabelMarkup('<i>What string is in the window title? Is used to detect the instrument window.</i>')
         self.window_pattern_ctrl = wx.TextCtrl(self)
         sizer.Add(windowPatternLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(smallmargin)
         sizer.Add(windowPatternDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(smallmargin)
         sizer.Add(self.window_pattern_ctrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
 
         sizer.AddSpacer(intermargin)
@@ -659,7 +674,9 @@ class CreateInstWindow(wx.Frame):
         mouseControlDescr = wx.StaticText(self) 
         mouseControlDescr.SetLabelMarkup('<i>How does the mouse adjust controls?</i>')
         sizer.Add(mouseControlLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(smallmargin)
         sizer.Add(mouseControlDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(smallmargin)
         choices = [
             "mouse drag (up and down)",
             "mouse wheel (prefer this if both are supported)"
@@ -669,16 +686,16 @@ class CreateInstWindow(wx.Frame):
 
         sizer.AddSpacer(intermargin)
 
-        controlPosLabel = wx.StaticText(self) 
-        controlPosLabel.SetLabelMarkup('<b>Control positions</b>')
-        controlPosDescr = wx.StaticText(self) 
-        controlPosDescr.SetLabelMarkup('<i>Take a screenshot of the instrument window. Crop the screen to contents, but\nexclude all window decoration, e.g. the window title bar.\nThen mark the controls by drawing rectangles  in the\nmarker color with any image app (e.g. GIMP).</i>')
-        sizer.Add(controlPosLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
-        sizer.Add(controlPosDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        filenameDescr = wx.StaticText(self)
+        filenameDescr.SetLabelMarkup('<i>Choose instrument configuration save file.\nThe filename must start with "inst-" and end with ".txt".</i>')
+        chooseSaveFile = wx.FilePickerCtrl(self, style=wx.FLP_SAVE, message="Save instrument text file", wildcard=".txt")
+        filepicker_set_button_label(chooseSaveFile, 'Save As')
+        chooseSaveFile.SetInitialDirectory(datadir())
 
-        chooseScreenshotCtrl = wx.FilePickerCtrl(self)
-        sizer.Add(chooseScreenshotCtrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
-
+        # filepicker_set_button_label(chooseSaveFile, 'Save &gt;')
+        sizer.Add(filenameDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(smallmargin)
+        sizer.Add(chooseSaveFile, 0, wx.CENTER | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(topbottommargin)
 
         self.SetSizer(sizer)
@@ -1114,6 +1131,13 @@ def connect_to_port(midiin, port_name):
         return True
     except ValueError:
         return False
+
+def filepicker_set_button_label(picker, label):
+    buttons = list(filter(lambda c: isinstance(c, wx.Button), picker.GetChildren()))
+    if len(buttons) == 1:
+        button = buttons[0]
+        button.SetLabel(label)
+        button.SetMinSize(button.GetBestSize())
 
 def main():
     app = wx.App(True)
