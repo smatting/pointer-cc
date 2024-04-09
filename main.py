@@ -91,37 +91,7 @@ class Box:
 def make_box(x, y, width, height):
     return Box(x, x + width, y, y + height)
 
-def find_markings(im, marker_color, update_percent):
-    boxes = []
-    spans_last = {}
-    for y in range(0, im.height):
-        update_percent(int(100*y//im.height))
-        xmin = None
-        xmax = None
-        spans = {}
-        for x in range(0, im.width):
-
-            in_marker = im.getpixel((x, y)) == marker_color
-            if in_marker:
-                if xmin is None:
-                    xmin = x
-                xmax = x
-
-            if (not in_marker and xmax is not None) or (in_marker and x == im.width - 1):
-                b = spans_last.get((xmin, xmax))
-                if b is not None:
-                    b.ymax = y
-                else:
-                    b = Box(xmin, xmax, y, y)
-                    boxes.append(b)
-                spans[(xmin, xmax)] = b
-                xmin = None
-                xmax = None
-        spans_last = spans
-    return boxes
-
 ControlType = Enum('ControlType', ['WHEEL', 'DRAG','CLICK'])
-
 
 class ConfigError(Exception):
     def __init__(self, msg):
@@ -184,10 +154,10 @@ def maybe(mv, f, default):
         return f(mv)
 
 class Instrument:
-    def __init__(self, pattern, box, controllers):
+    def __init__(self, pattern, box, controls):
         self.pattern = pattern
         self.box = box
-        self.controllers = controllers
+        self.controls = controls
 
     @staticmethod
     def load(path, context):
@@ -230,15 +200,44 @@ class Instrument:
             raise ConfigError(ce.msg + f", {context}")
 
 
-    def find_closest_controller(self, mx, my):
+    def find_closest_control(self, mx, my):
         c_best = None
         d_best = math.inf
-        for c in self.controllers:
+        for c in self.controls:
             d = math.pow(c.x - mx, 2.0) + math.pow(c.y - my, 2.0)
             if d < d_best:
                 c_best = c
                 d_best = d
         return c_best
+
+def find_markings(im, marker_color, update_percent):
+    boxes = []
+    spans_last = {}
+    for y in range(0, im.height):
+        update_percent(int(100*y//im.height))
+        xmin = None
+        xmax = None
+        spans = {}
+        for x in range(0, im.width):
+
+            in_marker = im.getpixel((x, y)) == marker_color
+            if in_marker:
+                if xmin is None:
+                    xmin = x
+                xmax = x
+
+            if (not in_marker and xmax is not None) or (in_marker and x == im.width - 1):
+                b = spans_last.get((xmin, xmax))
+                if b is not None:
+                    b.ymax = y
+                else:
+                    b = Box(xmin, xmax, y, y)
+                    boxes.append(b)
+                spans[(xmin, xmax)] = b
+                xmin = None
+                xmax = None
+        spans_last = spans
+    return boxes
 
 def analyze(self, filename, marker_color=(255, 0, 255, 255)):
     d = {}
@@ -518,8 +517,8 @@ def window_to_model(window_box, model_box):
     return model_to_window(window_box, model_box).inverse()
 
 class InstrumentController:
-    def __init__(self, model, window):
-        self.model = model
+    def __init__(self, instrument, window):
+        self.instrument = instrument
         self.set_window(window)
 
         self.mx = 0.0
@@ -538,19 +537,19 @@ class InstrumentController:
         
     def set_window(self, window):
         window_box = window.box
-        t = window_to_model(window_box, self.model.box)
+        t = window_to_instrument(window_box, self.instrument.box)
         s2w = screen_to_window(window_box)
         t.multiply_right(s2w)
-        self.screen_to_model = t
-        self.model_to_screen = self.screen_to_model.inverse()
+        self.screen_to_instrument = t
+        self.instrument_to_screen = self.screen_to_instrument.inverse()
         self.window = window
 
     def pan_x(self, x_normed):
-        self.mx = self.model.box.width * x_normed
+        self.mx = self.instrument.box.width * x_normed
         self.current_control = self.move_pointer_to_closest()
 
     def pan_y(self, y_normed):
-        self.my = self.model.box.height * y_normed
+        self.my = self.instrument.box.height * y_normed
         self.current_control = self.move_pointer_to_closest()
 
     def turn(self, cc):
@@ -558,9 +557,9 @@ class InstrumentController:
 
         screen_x, screen_y = mouse.get_position()
         if not self.dragging:
-            self.mx, self.my = self.screen_to_model.apply(screen_x, screen_y)
+            self.mx, self.my = self.screen_to_instrument.apply(screen_x, screen_y)
 
-        self.current_control = self.model.find_closest_controller(self.mx, self.my)
+        self.current_control = self.instrument.find_closest_control(self.mx, self.my)
         
         if self.last_control is not None:
             if self.last_control != self.current_control:
@@ -615,15 +614,15 @@ class InstrumentController:
         self.freewheeling_direction = None
 
     def move_pointer_to_closest(self):
-        c = self.model.find_closest_controller(self.mx, self.my)
+        c = self.instrument.find_closest_control(self.mx, self.my)
         if self.dragging:
             mouse.release()
             self.dragging = False
-        x, y = self.model_to_screen.apply(c.x, c.y)
+        x, y = self.instrument_to_screen.apply(c.x, c.y)
         mouse.move(int(x), int(y))
         return c
 
-class CreateInstWindow(wx.Dialog):
+class AddInstrumentDialog(wx.Dialog):
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title)
        
@@ -894,7 +893,7 @@ class MainWindow(wx.Frame):
         open_directory(datadir())
 
     def on_create_instrument(self, event):
-        w = CreateInstWindow(None, "Create Instrument")
+        w = AddInstrumentDialog(None, "Create Instrument")
         w.ShowModal()
 
     def on_close(self, event):
