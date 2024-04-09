@@ -273,9 +273,36 @@ def analyze(self, filename, marker_color=(255, 0, 255, 255)):
         c['x'] = x
         c['y'] = y
         controls[f'c{i+1}'] = c
-
     return d
 
+def toml_instrument_config(extract_result, window_contains, control_type):
+    doc = tomlkit.document()
+    doc.add(tomlkit.comment('The pointer-cc configuration file is of TOML format (https://toml.io). See the pointer-cc documentation for details.'))
+
+    window = tomlkit.table()
+    window.add('contains', window_contains)
+    doc.add('window', window)
+
+    dimensions = tomlkit.table()
+    dimensions.add('width', extract_result['dimensions']['width'])
+    dimensions.add('height', extract_result['dimensions']['height'])
+    doc.add('dimensions', dimensions)
+
+    default_control = tomlkit.table()
+    default_control.add('type', control_type)
+    default_control.add('wheel_speed', 1.0)
+    default_control.add('drag_speed', 1.0)
+    doc.add('default_control', default_control)
+
+    controls = tomlkit.table()
+    for cid, c in extract_result['controls'].items():
+        control = tomlkit.table()
+        control.add('x', c['x'])
+        control.add('y', c['y'])
+        control.add('m', 1.0)
+        controls.add(cid, control)
+    doc.add('controls', controls)
+    return doc
 
 midi_type_bij = Bijection('midi', 'display', [(0x80, "NOTEOFF"), (0x90, "NOTEON"), (0xA0, "KPRESS"), (0xB0, "CC"), (0xC0, "PROG"), (0xC0, "PROG"), (0xD0, "CHPRESS"), (0xE0, "PBEND"), (0xF0, "SYSEX")])
 
@@ -447,28 +474,6 @@ class Dispatcher(threading.Thread):
                     self.frame.set_window_text('No window found')
                 else:
                     self.frame.set_window_text(c.window.name)
-
-
-def generate_instrument(outfile, screenshot_file, window_contains, control_type_s):
-    doc = tomlkit.document()
-
-    doc.add(tomlkit.comment('This instrument configuration file is of TOML format (https://toml.io). See the pointer-cc documentation for details.'))
-
-    window = tomlkit.table()
-    window.add('contains', window_contains)
-
-    doc.add('window', window)
-
-    default_control = tomlkit.table()
-    default_control.add('type', control_type_s)
-    default_control.add('wheel_speed', 1.0)
-    default_control.add('drag_speed', 1.0)
-    doc.add('default_control', default_control)
-
-    analyze(doc, screenshot_file)
-
-    with open(outfile, 'w') as f:
-        f.write(doc.as_string())
 
 # affine transform that can be scaling and translation
 class Affine:
@@ -768,18 +773,18 @@ class CreateInstWindow(wx.Frame):
         path = self.chooseSaveFile.GetPath()
 
         problems = []
-        # if os.path.dirname(path) != datadir():
-        #     problems.append('Instrument file is not chosen in the configuration directory')
-        #
-        # if not re.match('^inst-(.*)\.txt$', os.path.basename(path)):
-        #     problems.append('Instrument file is not named in format inst-changeme.txt')
-        #
-        # if self.extract_result is None:
-        #     problems.append('Screenshot analysis is missing')
-        #
-        # window_pattern = self.window_pattern_ctrl.GetValue()
-        # if len(window_pattern) == 0:
-        #     problems.append('Window title pattern is missing')
+        if os.path.dirname(path) != datadir():
+            problems.append('Instrument file is not chosen in the configuration directory')
+
+        if not re.match('^inst-(.*)\.txt$', os.path.basename(path)):
+            problems.append('Instrument file is not named in format inst-changeme.txt')
+
+        if self.extract_result is None:
+            problems.append('Screenshot analysis is missing')
+
+        window_contains = self.window_pattern_ctrl.GetValue()
+        if len(window_contains) == 0:
+            problems.append('Window title pattern is missing')
 
         if len(problems) > 0:
             message = "Did not safe the instrument because:\n"
@@ -789,7 +794,10 @@ class CreateInstWindow(wx.Frame):
             dlg.Destroy()
             return
 
-
+        mouse_control = control_type_bij.str([ControlType.DRAG, ControlType.WHEEL][self.mousectrl_combo.GetCurrentSelection()])
+        doc = toml_instrument_config(self.extract_result, window_contains, mouse_control)
+        with open(path, 'w') as f:
+            f.write(doc.as_string())
 
 
 class MainWindow(wx.Frame):
@@ -1267,10 +1275,6 @@ def main():
     polling.join()
 
     dispatcher.join()
-
-def main_analyze():
-    generate_instrument('instruments/inst-tal-j-8.txt', 'instruments/tal-jupiter.png', 'TAL-J-8', 'wheel')
-    generate_instrument('instruments/inst-prophet-5-v.txt', 'instruments/prophet-5-v-marked.png', 'Prophet-5 V', 'drag')
 
 if __name__ == '__main__':
     # main_analyze()
