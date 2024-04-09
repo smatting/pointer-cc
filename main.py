@@ -102,14 +102,16 @@ class Box:
 def make_box(x, y, width, height):
     return Box(x, x + width, y, y + height)
 
-def find_markings(im, marker_color):
+def find_markings(im, marker_color, update_percent):
     boxes = []
     spans_last = {}
     for y in range(0, im.height):
+        update_percent(int(100*y//im.height))
         xmin = None
         xmax = None
         spans = {}
         for x in range(0, im.width):
+
             in_marker = im.getpixel((x, y)) == marker_color
             if in_marker:
                 if xmin is None:
@@ -251,7 +253,7 @@ class Instrument:
                 d_best = d
         return c_best
 
-def analyze(filename, marker_color=(255, 0, 255, 255)):
+def analyze(self, filename, marker_color=(255, 0, 255, 255)):
     d = {}
     im = Image.open(filename)
 
@@ -260,9 +262,12 @@ def analyze(filename, marker_color=(255, 0, 255, 255)):
     dimensions['width'] = im.width
     dimensions['height'] = im.height
 
+    def update_percent(i):
+        wx.CallAfter(self.update_progress, i)
+
     controls = {}
     d['controls'] = controls
-    markings = find_markings(im, marker_color)
+    markings = find_markings(im, marker_color, update_percent)
     for i, box in enumerate(markings):
         c = {}
         x, y = box.center()
@@ -627,7 +632,8 @@ class MouseController:
 class CreateInstWindow(wx.Frame):
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title)
-
+       
+        self.extract_result = None
         topbottommargin = 25
         intermargin = 25
         smallmargin = 4
@@ -669,10 +675,10 @@ class CreateInstWindow(wx.Frame):
         self.selectScreenshot.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_screenshot_selected)
         filepicker_set_button_label(self.selectScreenshot, 'Analyze Screenshot')
 
-        analyzeText = wx.StaticText(self, label="(no positions extracted yet)")
+        self.analyzeText = wx.StaticText(self, label="(no positions extracted yet)")
         analyzeSizer = wx.BoxSizer(wx.HORIZONTAL)
         analyzeSizer.Add(self.selectScreenshot)
-        analyzeSizer.Add(analyzeText, 0, wx.LEFT, border=smallmargin)
+        analyzeSizer.Add(self.analyzeText, 0, wx.LEFT, border=smallmargin)
         sizer.Add(analyzeSizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
 
         sizer.AddSpacer(intermargin)
@@ -680,7 +686,7 @@ class CreateInstWindow(wx.Frame):
         windowPatternLabel = wx.StaticText(self) 
         windowPatternLabel.SetLabelMarkup('<b>Window Pattern</b>')
         windowPatternDescr = wx.StaticText(self, style=wx.LB_MULTIPLE)  
-        windowPatternDescr.SetLabelMarkup('<i>What piece of text is contained in the window title? This is used to detect the instrument window..</i>')
+        windowPatternDescr.SetLabelMarkup('<i>What string is always contained in the instrument\'s window title (usually the name)? This is needed to detect its window.</i>')
         self.window_pattern_ctrl = wx.TextCtrl(self)
         sizer.Add(windowPatternLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
@@ -734,10 +740,11 @@ class CreateInstWindow(wx.Frame):
         msg = 'Marker color: #' + fmt_hex(r) + fmt_hex(g) + fmt_hex(b) + ", " + f'rgb({r},{g},{b})'
         self.cpLabel.SetLabel(msg)
 
-    def on_extract_done(self, delayed_result):
+    def on_extract_done(self, delayed_result, **kwargs):
         if self.progress:
             self.progress.Destroy()
             self.progress = None
+        self.set_extract_result(delayed_result.get(), kwargs['path'])
 
     def update_progress(self, i):
         if self.progress:
@@ -745,14 +752,19 @@ class CreateInstWindow(wx.Frame):
 
     def on_screenshot_selected(self, event):
         path = self.selectScreenshot.GetPath()
+        marker_color = self.colorPickerCtrl.GetColour().Get()
         self.progress = wx.ProgressDialog("In Progress", message="Analyzing screenshot...")
+        wx.lib.delayedresult.startWorker(self.on_extract_done, workerFn=analyze, ckwargs=dict(path=path), wargs=[self, path, marker_color])
 
-        def long_running_task(self):
-            for i in range(1, 101):
-                time.sleep(0.01)  # Simulate processing time
-                wx.CallAfter(self.update_progress, i)
-            return 4
-        wx.lib.delayedresult.startWorker(self.on_extract_done, workerFn=long_running_task, wargs=[self])
+    def set_extract_result(self, extract_result, path):
+        self.extract_result = extract_result
+        dim = extract_result['dimensions']
+        width = dim['width']
+        height = dim['height']
+        n = len(extract_result['controls'])
+        filename = os.path.basename(path)
+        msg = f'{width}x{height}, {n} controls ({filename}).'
+        self.analyzeText.SetLabel(msg)
 
 
 class MainWindow(wx.Frame):
