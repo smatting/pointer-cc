@@ -537,7 +537,7 @@ class InstrumentController:
         
     def set_window(self, window):
         window_box = window.box
-        t = window_to_instrument(window_box, self.instrument.box)
+        t = window_to_model(window_box, self.instrument.box)
         s2w = screen_to_window(window_box)
         t.multiply_right(s2w)
         self.screen_to_instrument = t
