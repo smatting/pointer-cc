@@ -1,6 +1,7 @@
 import Quartz
 from PIL import Image
 import wx
+import wx.lib.delayedresult
 import time
 import textwrap
 import traceback
@@ -250,26 +251,27 @@ class Instrument:
                 d_best = d
         return c_best
 
-def analyze(doc, filename, marker_color=(255, 0, 255, 255)):
+def analyze(filename, marker_color=(255, 0, 255, 255)):
+    d = {}
     im = Image.open(filename)
 
-    dimensions = tomlkit.table()
-    dimensions.add('width', im.width)
-    dimensions.add('height', im.height)
-    doc.add('dimensions', dimensions)
+    dimensions = {}
+    d['dimensions'] = dimensions
+    dimensions['width'] = im.width
+    dimensions['height'] = im.height
 
-    controls = tomlkit.table()
-    for i, box in enumerate(find_markings(im, marker_color)):
+    controls = {}
+    d['controls'] = controls
+    markings = find_markings(im, marker_color)
+    for i, box in enumerate(markings):
+        c = {}
         x, y = box.center()
         c = tomlkit.table() 
-        c.add('x', x)
-        c.add('y', y)
-        c.add('m', 1.0)
-        controls.add(f'c{i+1}', c)
+        c['x'] = x
+        c['y'] = y
+        controls[f'c{i+1}'] = c
 
-    doc.add('controls', controls)
-
-    return doc
+    return d
 
 
 midi_type_bij = Bijection('midi', 'display', [(0x80, "NOTEOFF"), (0x90, "NOTEON"), (0xA0, "KPRESS"), (0xB0, "CC"), (0xC0, "PROG"), (0xC0, "PROG"), (0xD0, "CHPRESS"), (0xE0, "PBEND"), (0xF0, "SYSEX")])
@@ -277,7 +279,7 @@ midi_type_bij = Bijection('midi', 'display', [(0x80, "NOTEOFF"), (0x90, "NOTEON"
 def fmt_hex(i):
     s = hex(i)[2:].upper()
     prefix = "".join(((2 - len(s)) * ["0"]))
-    return prefix + hex(i)[2:].upper()
+    return prefix + s
 
 def fmt_midi(msg):
     if len(msg) == 0:
@@ -647,26 +649,30 @@ class CreateInstWindow(wx.Frame):
         controlPosLabel.SetLabelMarkup('<b>Control positions</b>')
         controlPosDescr = wx.StaticText(self) 
         controlPosDescr.SetLabelMarkup('<i>Take a screenshot of the instrument window. Crop the screen to contents, but\nexclude all window decoration, e.g. the window title bar or borders.\nThen mark the controls by drawing rectangles in the marker color with any image app (e.g. GIMP).</i>')
-        cpLabel = wx.StaticText(self, label="Marker color #FF00FF, rgb(255,0,255)")
-        colorPickerCtrl = wx.ColourPickerCtrl(self)
+        # cpLabel = wx.StaticText(self, label="Marker color #FF00FF, rgb(255,0,255)")
+        self.cpLabel = wx.StaticText(self)
+        self.colorPickerCtrl = wx.ColourPickerCtrl(self)
+        self.colorPickerCtrl.SetColour(wx.Colour(255, 0, 255))
+        self.colorPickerCtrl.Bind(wx.EVT_COLOURPICKER_CHANGED, self.on_color_changed)
+
+        self.set_color_text()
         cpSizer = wx.BoxSizer(wx.HORIZONTAL)
-        cpSizer.Add(colorPickerCtrl, 0)
-        cpSizer.Add(cpLabel, wx.SizerFlags().Bottom().Border(wx.LEFT, borderinpixels=smallmargin))
+        cpSizer.Add(self.colorPickerCtrl, 0)
+        cpSizer.Add(self.cpLabel, wx.SizerFlags().Bottom().Border(wx.LEFT, borderinpixels=smallmargin))
         sizer.Add(controlPosLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
         sizer.Add(controlPosDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
         sizer.Add(cpSizer, 0, wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
-        chooseScreenshotCtrl = wx.FilePickerCtrl(self, style=wx.FLP_OPEN, message="Select a cropped screenshot of instrument", wildcard=".png")
-        chooseScreenshotCtrl = chooseScreenshotCtrl 
-        filepicker_set_button_label(chooseScreenshotCtrl, 'Analyze Screenshot')
-        # chooseScreenshotCtrl.Fit()
+        self.selectScreenshot = wx.FilePickerCtrl(self, style=wx.FLP_OPEN, message="Select a cropped screenshot of instrument", wildcard=".png")
+        self.selectScreenshot.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_screenshot_selected)
+        filepicker_set_button_label(self.selectScreenshot, 'Analyze Screenshot')
 
         analyzeText = wx.StaticText(self, label="(no positions extracted yet)")
         analyzeSizer = wx.BoxSizer(wx.HORIZONTAL)
-        analyzeSizer.Add(chooseScreenshotCtrl)
-        analyzeSizer.Add(analyzeText)
+        analyzeSizer.Add(self.selectScreenshot)
+        analyzeSizer.Add(analyzeText, 0, wx.LEFT, border=smallmargin)
         sizer.Add(analyzeSizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
 
         sizer.AddSpacer(intermargin)
@@ -674,7 +680,7 @@ class CreateInstWindow(wx.Frame):
         windowPatternLabel = wx.StaticText(self) 
         windowPatternLabel.SetLabelMarkup('<b>Window Pattern</b>')
         windowPatternDescr = wx.StaticText(self, style=wx.LB_MULTIPLE)  
-        windowPatternDescr.SetLabelMarkup('<i>What string is in the window title? Is used to detect the instrument window.</i>')
+        windowPatternDescr.SetLabelMarkup('<i>What piece of text is contained in the window title? This is used to detect the instrument window..</i>')
         self.window_pattern_ctrl = wx.TextCtrl(self)
         sizer.Add(windowPatternLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
@@ -703,9 +709,10 @@ class CreateInstWindow(wx.Frame):
 
         filenameDescr = wx.StaticText(self)
         filenameDescr.SetLabelMarkup('<i>Choose instrument configuration save file. The filename must start with "inst-" and end with ".txt".</i>')
-        chooseSaveFile = wx.FilePickerCtrl(self, style=wx.FLP_SAVE, message="Save instrument text file", wildcard=".txt")
+        chooseSaveFile = wx.FilePickerCtrl(self, style=wx.FLP_SAVE, message="Save instrument text file")
         filepicker_set_button_label(chooseSaveFile, 'Save Instrument')
         chooseSaveFile.SetInitialDirectory(datadir())
+        chooseSaveFile.SetPath(userfile('inst-renameme.txt'))
 
         # filepicker_set_button_label(chooseSaveFile, 'Save &gt;')
         sizer.Add(filenameDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
@@ -713,9 +720,40 @@ class CreateInstWindow(wx.Frame):
         sizer.Add(chooseSaveFile, 0, wx.CENTER | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(topbottommargin)
 
+        self.progress = None
 
         self.SetSizer(sizer)
         self.Fit()
+
+    def on_color_changed(self, _):
+        self.set_color_text()
+
+    def set_color_text(self):
+        c = self.colorPickerCtrl.GetColour()
+        r, g, b, _ = c.Get()
+        msg = 'Marker color: #' + fmt_hex(r) + fmt_hex(g) + fmt_hex(b) + ", " + f'rgb({r},{g},{b})'
+        self.cpLabel.SetLabel(msg)
+
+    def on_extract_done(self, delayed_result):
+        if self.progress:
+            self.progress.Destroy()
+            self.progress = None
+
+    def update_progress(self, i):
+        if self.progress:
+            self.progress.Update(i)
+
+    def on_screenshot_selected(self, event):
+        path = self.selectScreenshot.GetPath()
+        self.progress = wx.ProgressDialog("In Progress", message="Analyzing screenshot...")
+
+        def long_running_task(self):
+            for i in range(1, 101):
+                time.sleep(0.01)  # Simulate processing time
+                wx.CallAfter(self.update_progress, i)
+            return 4
+        wx.lib.delayedresult.startWorker(self.on_extract_done, workerFn=long_running_task, wargs=[self])
+
 
 class MainWindow(wx.Frame):
     def __init__(self, parent, title, q, ports, config, instruments):
