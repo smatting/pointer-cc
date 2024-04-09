@@ -12,6 +12,7 @@ TODOS:
 - [x] warn user when no instruments are configured
 - [x] fix: ZeroDivisionError: float division by zero
 - [x] rename controllers to controls
+- [ ] allow for markers in any shape, not just rectangles
 - [ ] write documentation
 - [ ] Sign app with developer id
 - [ ] license
