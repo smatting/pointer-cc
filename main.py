@@ -59,7 +59,6 @@ def datadir():
     return appdirs.user_data_dir(app_name, app_author)
 
 def userfile(p):
-    import tomlkit
     return os.path.join(datadir(), p)
 
 def configfile():
@@ -271,7 +270,6 @@ def analyze(self, filename, marker_color=(255, 0, 255, 255)):
     for i, box in enumerate(markings):
         c = {}
         x, y = box.center()
-        c = tomlkit.table() 
         c['x'] = x
         c['y'] = y
         controls[f'c{i+1}'] = c
@@ -715,15 +713,15 @@ class CreateInstWindow(wx.Frame):
 
         filenameDescr = wx.StaticText(self)
         filenameDescr.SetLabelMarkup('<i>Choose instrument configuration save file. The filename must start with "inst-" and end with ".txt".</i>')
-        chooseSaveFile = wx.FilePickerCtrl(self, style=wx.FLP_SAVE, message="Save instrument text file")
-        filepicker_set_button_label(chooseSaveFile, 'Save Instrument')
-        chooseSaveFile.SetInitialDirectory(datadir())
-        chooseSaveFile.SetPath(userfile('inst-renameme.txt'))
+        self.chooseSaveFile = wx.FilePickerCtrl(self, style=wx.FLP_SAVE, message="Save instrument text file")
+        filepicker_set_button_label(self.chooseSaveFile, 'Save Instrument')
+        self.chooseSaveFile.SetInitialDirectory(datadir())
+        self.chooseSaveFile.SetPath(userfile('inst-renameme.txt'))
+        self.chooseSaveFile.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_save_file_picked)
 
-        # filepicker_set_button_label(chooseSaveFile, 'Save &gt;')
         sizer.Add(filenameDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
-        sizer.Add(chooseSaveFile, 0, wx.CENTER | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.Add(self.chooseSaveFile, 0, wx.CENTER | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(topbottommargin)
 
         self.progress = None
@@ -765,6 +763,33 @@ class CreateInstWindow(wx.Frame):
         filename = os.path.basename(path)
         msg = f'{width}x{height}, {n} controls ({filename}).'
         self.analyzeText.SetLabel(msg)
+
+    def on_save_file_picked(self, event):
+        path = self.chooseSaveFile.GetPath()
+
+        problems = []
+        # if os.path.dirname(path) != datadir():
+        #     problems.append('Instrument file is not chosen in the configuration directory')
+        #
+        # if not re.match('^inst-(.*)\.txt$', os.path.basename(path)):
+        #     problems.append('Instrument file is not named in format inst-changeme.txt')
+        #
+        # if self.extract_result is None:
+        #     problems.append('Screenshot analysis is missing')
+        #
+        # window_pattern = self.window_pattern_ctrl.GetValue()
+        # if len(window_pattern) == 0:
+        #     problems.append('Window title pattern is missing')
+
+        if len(problems) > 0:
+            message = "Did not safe the instrument because:\n"
+            message += '\n'.join([f"{i+1}: {p}" for i, p in enumerate(problems)])
+            dlg = wx.MessageDialog(None, message, 'Instrument not saved', wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+
 
 
 class MainWindow(wx.Frame):
