@@ -632,7 +632,7 @@ class MouseController:
         mouse.move(int(x), int(y))
         return c
 
-class CreateInstWindow(wx.Frame):
+class CreateInstWindow(wx.Dialog):
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title)
        
@@ -787,7 +787,7 @@ class CreateInstWindow(wx.Frame):
             problems.append('Window title pattern is missing')
 
         if len(problems) > 0:
-            message = "Did not safe the instrument because:\n"
+            message = "Did not save the instrument because:\n"
             message += '\n'.join([f"{i+1}: {p}" for i, p in enumerate(problems)])
             dlg = wx.MessageDialog(None, message, 'Instrument not saved', wx.OK | wx.ICON_ERROR)
             dlg.ShowModal()
@@ -802,10 +802,13 @@ class CreateInstWindow(wx.Frame):
         message = f'"{os.path.basename(path)}" was successfully saved to the configuration directory.\nTo further adjust it you need to open it with a text editor.\nPlease read the documentation on the details of the instrument configuration file. You need to restart pointer-cc for changes to configuration to take effect.'
         dlg = wx.MessageDialog(None, message, f'Instrument successfully saved', wx.OK | wx.CANCEL)
         dlg.SetOKLabel("Open configuration directory")
-        dlg.ShowModal()
+        response = dlg.ShowModal()
         dlg.Destroy()
-        open_directory(datadir())
-        self.Destroy()
+
+        if response == wx.ID_OK:
+            open_directory(datadir())
+
+        self.EndModal(0)
 
 class MainWindow(wx.Frame):
     def __init__(self, parent, title, q, ports, config, instruments):
@@ -851,6 +854,8 @@ class MainWindow(wx.Frame):
 
         open_config = filemenu.Append(wx.ID_ANY, "&Open Config Dir"," Open configuartion directory")
         self.Bind(wx.EVT_MENU, self.on_open_config, open_config)
+        create_instrument = filemenu.Append(wx.ID_ANY, "&Add Instrument"," Add instrument configuration")
+        self.Bind(wx.EVT_MENU, self.on_create_instrument, create_instrument)
 
         exitMenutItem = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
         self.Bind(wx.EVT_MENU, self.on_exit, exitMenutItem)
@@ -896,6 +901,10 @@ class MainWindow(wx.Frame):
 
     def on_open_config(self, event):
         open_directory(datadir())
+
+    def on_create_instrument(self, event):
+        w = CreateInstWindow(None, "Create Instrument")
+        w.ShowModal()
 
     def on_close(self, event):
         self.queue.put((InternalCommand.QUIT, None))
@@ -1264,9 +1273,6 @@ def main():
         instruments = load_instruments()
 
         frame = MainWindow(None, "pointer-cc", q, ports, config, instruments)
-
-        w = CreateInstWindow(None, "Create Instrument")
-        w.Show()
 
         polling = WindowPolling(q, list(instruments.keys()))
         polling.start()
