@@ -41,19 +41,9 @@ class Bijection:
 
     def _a(self, b):
         return self._d_btoa.get(b)
-        # TODO: raise / handle config errors at call site
-        # if v is None:
-        #     knowns = ", ".join([f"\"{str(k)}\"" for k in self._d_btoa.keys()])
-        #     msg = f'Unknown value "{str(b)}", known values are: {knowns}.' 
-        #     raise ConfigError(msg)
-        return v
 
     def _b(self, a):
         return self._d_atob.get(a)
-        # if v is None:
-        #     knowns = ", ".join([f"\"{str(k)}\"" for k in self._d_atob.keys()])
-        #     msg = f'Unknown value "{str(a)}", known values are: {knowns}.' 
-        #     raise ConfigError(msg)
 
 def datadir():
     return appdirs.user_data_dir(app_name, app_author)
@@ -147,8 +137,6 @@ def in_context(f, context):
 
 control_type_bij = Bijection('str', 'enum', [('wheel', ControlType.WHEEL), ('drag', ControlType.DRAG), ('click', ControlType.CLICK)])
 
-
-#TODO: rename Control
 class Controller:
     def __init__(self, type_, i, x, y, speed, m):
         self.type_ = type_
@@ -475,6 +463,9 @@ class Dispatcher(threading.Thread):
                 else:
                     self.frame.set_window_text(c.window.name)
 
+def unit_affine():
+    return Affine(1.0, 1.0, 0.0, 0.0)
+
 # affine transform that can be scaling and translation
 class Affine:
     def __init__(self, sx, sy, dx, dy):
@@ -484,6 +475,9 @@ class Affine:
         self.dy = dy
 
     def inverse(self):
+        small = 1e-2
+        if abs(self.sx) < small or abs(self.sy) < small:
+            return unit_affine()
         sx_inv = 1.0 / self.sx
         sy_inv = 1.0 / self.sy
         return Affine(sx_inv, sy_inv, - sx_inv * self.dx, - sy_inv * self.dy)
@@ -511,6 +505,8 @@ def window_to_screen(window_box):
     return screen_to_window(window_box).inverse()
 
 def model_to_window(window_box, model_box):
+    if model_box.width == 0 or model_box.height == 0:
+        return unit_affine()
     sx = window_box.width / model_box.width
     sy = window_box.height / model_box.height
     s = min(sx, sy)
@@ -620,14 +616,9 @@ class MouseController:
 
     def move_pointer_to_closest(self):
         c = self.model.find_closest_controller(self.mx, self.my)
-        #
-        # if self.last_controller_turned is not None:
-        #     if c != self.last_controller_turned:
-
         if self.dragging:
             mouse.release()
             self.dragging = False
-
         x, y = self.model_to_screen.apply(c.x, c.y)
         mouse.move(int(x), int(y))
         return c
@@ -1069,7 +1060,6 @@ class ClickStateMachine:
         self.down_cc = None
         self.isdown = False
 
-
     def __repr__(self):
         return str((self.start_cc, self.start_t, self.down_cc, self.isdown))
 
@@ -1290,5 +1280,4 @@ def main():
     dispatcher.join()
 
 if __name__ == '__main__':
-    # main_analyze()
     main()
