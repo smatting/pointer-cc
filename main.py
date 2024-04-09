@@ -799,6 +799,13 @@ class CreateInstWindow(wx.Frame):
         with open(path, 'w') as f:
             f.write(doc.as_string())
 
+        message = f'"{os.path.basename(path)}" was successfully saved to the configuration directory.\nTo further adjust it you need to open it with a text editor.\nPlease read the documentation on the details of the instrument configuration file. You need to restart pointer-cc for changes to configuration to take effect.'
+        dlg = wx.MessageDialog(None, message, f'Instrument successfully saved', wx.OK | wx.CANCEL)
+        dlg.SetOKLabel("Open configuration directory")
+        dlg.ShowModal()
+        dlg.Destroy()
+        open_directory(datadir())
+        self.Destroy()
 
 class MainWindow(wx.Frame):
     def __init__(self, parent, title, q, ports, config, instruments):
