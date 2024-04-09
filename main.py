@@ -373,8 +373,8 @@ class Dispatcher(threading.Thread):
 
             ctrl_info_parts = []
             if controller:
-                if controller.current_controller is not None:
-                    ctrl_info_parts.append(str(controller.current_controller))
+                if controller.current_control is not None:
+                    ctrl_info_parts.append(str(controller.current_control))
 
                 if controller.freewheeling:
                     ctrl_info_parts.append('(freewheeling)')
@@ -455,7 +455,7 @@ class Dispatcher(threading.Thread):
                     if name in self.controllers:
                         del self.controllers[name]
                 else:
-                    self.controllers[name] = MouseController(self.instruments[window.pattern], window)
+                    self.controllers[name] = InstrumentController(self.instruments[window.pattern], window)
 
                 c = self.get_active_controller()
                 if c is None:
@@ -517,21 +517,21 @@ def model_to_window(window_box, model_box):
 def window_to_model(window_box, model_box):
     return model_to_window(window_box, model_box).inverse()
 
-class MouseController:
+class InstrumentController:
     def __init__(self, model, window):
         self.model = model
         self.set_window(window)
 
         self.mx = 0.0
         self.my = 0.0
-        self.current_controller = None
+        self.current_control = None
 
         self.freewheeling = False
         self.freewheeling_direction = None
 
-        self.last_controller_turned = None
         self.last_cc = None
-        self.last_controller_accum = 0.0
+        self.last_control = None
+        self.last_control_accum = 0.0
         self.dragging = False
         
         self.click_sm = ClickStateMachine(1.0, 2)
@@ -547,11 +547,11 @@ class MouseController:
 
     def pan_x(self, x_normed):
         self.mx = self.model.box.width * x_normed
-        self.current_controller = self.move_pointer_to_closest()
+        self.current_control = self.move_pointer_to_closest()
 
     def pan_y(self, y_normed):
         self.my = self.model.box.height * y_normed
-        self.current_controller = self.move_pointer_to_closest()
+        self.current_control = self.move_pointer_to_closest()
 
     def turn(self, cc):
         status = None
@@ -560,13 +560,13 @@ class MouseController:
         if not self.dragging:
             self.mx, self.my = self.screen_to_model.apply(screen_x, screen_y)
 
-        self.current_controller = self.model.find_closest_controller(self.mx, self.my)
+        self.current_control = self.model.find_closest_controller(self.mx, self.my)
         
-        if self.last_controller_turned is not None:
-            if self.last_controller_turned != self.current_controller:
+        if self.last_control is not None:
+            if self.last_control != self.current_control:
                 self.click_sm.reset()
                 self.last_cc = cc
-                self.last_controller_accum = 0.0
+                self.last_control_accum = 0.0
 
         if self.last_cc is None:
             self.last_cc = cc
@@ -581,18 +581,18 @@ class MouseController:
                 self.freewheeling_direction = None
 
         else:
-            if self.current_controller is not None:
-                m = self.current_controller.m
-                speed = self.current_controller.speed * self.current_controller.m
+            if self.current_control is not None:
+                m = self.current_control.m
+                speed = self.current_control.speed * self.current_control.m
 
-            self.last_controller_accum += delta * speed
-            k_whole = int(self.last_controller_accum)
-            self.last_controller_accum -= k_whole
+            self.last_control_accum += delta * speed
+            k_whole = int(self.last_control_accum)
+            self.last_control_accum -= k_whole
 
-            if self.current_controller.type_ == ControlType.WHEEL:
+            if self.current_control.type_ == ControlType.WHEEL:
                 mouse.wheel(k_whole)
                 status = f'wheel! {"+" if k_whole > 0 else ""} (x{speed:.2f})'
-            elif  self.current_controller.type_ == ControlType.DRAG:
+            elif  self.current_control.type_ == ControlType.DRAG:
                 if self.dragging:
                     pass
                 else:
@@ -600,13 +600,13 @@ class MouseController:
                     self.dragging = True
                 mouse.move(screen_x, screen_y - k_whole)
                 status = f'drag! {"+" if k_whole > 0 else ""}{k_whole} (x{speed:.2f})'
-            elif self.current_controller.type_ == ControlType.CLICK:
+            elif self.current_control.type_ == ControlType.CLICK:
                 is_click = self.click_sm.on_cc(cc, time.time())
                 if is_click:
                     mouse.click()
                     status = f'click! (x{speed:.2f})'
 
-        self.last_controller_turned = self.current_controller
+        self.last_control = self.current_control
         self.last_cc = cc
         return status
 
