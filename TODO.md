@@ -7,17 +7,14 @@ TODOS:
 - [x] implement click
 - [x] auto-connect MIDI
 - [x] make image analysis available in GUI
-- write documentation
-- windows version 
-- Sign app with developer id
 - [x] remove yaml
 - [x] logo
 - [x] warn user when no instruments are configured
-- [ ] case-insensitive window title matcher
+- [x] fix: ZeroDivisionError: float division by zero
+- [x] rename controllers to controls
+- [ ] write documentation
+- [ ] Sign app with developer id
 - [ ] license
-- show nice config error messages, handle gracefully
-- create video
-- Rename controllers to controls
-- fix:     sx_inv = 1.0 / self.sx
-    ZeroDivisionError: float division by zero
-    ^C
+- [ ] create video
+- [ ] windows version (https://github.com/mhammond/pywin32 ?)
+- [ ] show nice config error messages, handle gracefully
