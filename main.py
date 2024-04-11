@@ -1,4 +1,3 @@
-import Quartz
 from PIL import Image
 import wx
 import wx.lib.delayedresult
@@ -24,6 +23,13 @@ import sys
 import re
 import appdirs
 from enum import Enum
+from pointercc.core import Window, Box, make_box
+if sys.platform == "win32":
+    import pointercc.win32 as core_platform
+elif sys.platform == "darwin":
+    import pointercc.darwin as core_platform
+else:
+    raise NotImplemnted(f'Platform {sys.platform} not supported')
 
 app_name = "pointer-cc"
 app_author = "smatting"
@@ -61,35 +67,6 @@ def initialize_config():
         with open(cf, 'w') as f:
             conf = default_config()
             f.write(conf.as_string())
-
-class Box:
-    def __init__(self, xmin, xmax, ymin, ymax):
-        self.xmin = xmin
-        self.xmax = xmax
-        self.ymin = ymin
-        self.ymax = ymax
-
-    def __eq__(self, other):
-        return self.totuple() == other.totuple()
-
-    def totuple(self):
-        return (self.xmin, self.xmax, self.ymin, self.ymax)
-
-    def center(self):
-        x = self.xmin + (self.xmax - self.xmin) // 2
-        y = self.ymin + (self.ymax - self.ymin) // 2
-        return (x, y)
-
-    @property
-    def width(self):
-        return self.xmax - self.xmin
-
-    @property
-    def height(self):
-        return self.ymax - self.ymin
-
-def make_box(x, y, width, height):
-    return Box(x, x + width, y, y + height)
 
 ControlType = Enum('ControlType', ['WHEEL', 'DRAG','CLICK'])
 
@@ -946,37 +923,6 @@ def matches_name(window, name_pattern):
                 return True
         return False
 
-class Window:
-    def __init__(self, pattern, name, box):
-        self.pattern = pattern
-        self.name = name
-        self.box = box
-
-    def totuple(self):
-        return (self.pattern, self.name, self.box)
-
-    def __eq__(self, other):
-        if other is None:
-            return False
-        else:
-            return self.totuple() == other.totuple()
-
-def get_windows_mac(name_patterns=["TAL-J-8"]):
-    windows = Quartz.CGWindowListCopyWindowInfo(0, Quartz.kCGNullWindowID)
-    result = {}
-    for w in windows:
-        bounds = w.get(Quartz.kCGWindowBounds)
-        name = str(w.get(Quartz.kCGWindowName))
-        if name is None or bounds is None:
-            continue
-
-        for pattern in name_patterns:
-            if name.find(pattern) > -1:
-                box = make_box(int(bounds['X']), int(bounds['Y']), int(bounds['Width']), int(bounds['Height']))
-                window = Window(pattern, name, box)
-                result[name] = window
-    return result
-
 class WindowPolling(threading.Thread):
     def __init__(self, queue, patterns):
         super(WindowPolling, self).__init__()
@@ -989,7 +935,7 @@ class WindowPolling(threading.Thread):
     def run(self):
         running = True
         while running:
-            windows = get_windows_mac(self.patterns)
+            windows = core_platform.get_windows(self.patterns)
             for name, window in windows.items():
                 if self.windows.get(name) != windows[name]:
                     self.queue.put((InternalCommand.UPDATE_WINDOW, name, windows[name]))
@@ -1215,17 +1161,12 @@ def load_instruments():
     return d
 
 def open_directory(path):
-    if platform.system() == "Windows":
+    if sys.platform == "win32":
         os.startfile(path)
-    elif platform.system() == "Darwin":
+    elif sys.platform == "darwin":
         subprocess.Popen(["open", path])
     else:
         subprocess.Popen(["xdg-open", path])
-
-def request_access():
-    Quartz.CGRequestPostEventAccess()
-    Quartz.CGRequestScreenCaptureAccess()
-    Quartz.CGPreflightScreenCaptureAccess()
 
 def connect_to_port(midiin, port_name):
     ports = midiin.get_ports()
@@ -1245,12 +1186,14 @@ def filepicker_set_button_label(picker, label):
 
 def main():
     app = wx.App(True)
+    polling = None
+    dispatcher = None
     try:
         initialize_config()
 
         config = Config.load(userfile('config.txt'))
 
-        request_access()
+        core_platform.init()
 
         q = queue.Queue()
 
@@ -1273,10 +1216,12 @@ def main():
 
     app.MainLoop()
 
-    polling.event.set()
-    polling.join()
+    if polling:
+        polling.event.set()
+        polling.join()
 
-    dispatcher.join()
+    if dispatcher:
+        dispatcher.join()
 
 if __name__ == '__main__':
     main()

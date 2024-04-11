@@ -24,6 +24,7 @@ pyobjc-core==10.2; sys_platform == "darwin"
 pyobjc-framework-Cocoa==10.2; sys_platform == "darwin"
 pyobjc-framework-Quartz==10.2; sys_platform == "darwin"
 PyRect==0.2.0
+pywin32==306; sys_platform == "win32"
 python-rtmidi==1.5.8
 six==1.16.0
 stack-data==0.6.3
