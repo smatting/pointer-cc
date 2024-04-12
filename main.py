@@ -156,8 +156,8 @@ class Instrument:
             type_s = expect_value(dc, "type")
             default_type = control_type_bij.enum(type_s)
 
-            wheel_speed_s = expect_value(dc, "wheel_speed")
-            default_wheel_speed = in_context(lambda: expect_float(wheel_speed_s), 'wheel_speed')
+            # wheel_speed_s = expect_value(dc, "wheel_speed")
+            # default_wheel_speed = in_context(lambda: expect_float(wheel_speed_s), 'wheel_speed')
 
             drag_speed_s = expect_value(dc, "drag_speed")
             default_drag_speed = in_context(lambda: expect_float(drag_speed_s), 'drag_speed')
@@ -165,7 +165,7 @@ class Instrument:
             controls_unparsed = expect_value(d, 'controls')
             for control_id, v in controls_unparsed.items():
                 context = "for control {control_id}"
-                c = Controller.parse(v, control_id, default_wheel_speed, default_drag_speed, default_type, context)
+                c = Controller.parse(v, control_id, 1.0, default_drag_speed, default_type, context)
                 controls.append(c)
 
             window = expect_value(d, 'window')
@@ -266,7 +266,7 @@ def toml_instrument_config(extract_result, window_contains, control_type):
 
     default_control = tomlkit.table()
     default_control.add('type', control_type)
-    default_control.add('wheel_speed', 1.0)
+    # default_control.add('wheel_speed', 1.0)
     default_control.add('drag_speed', 1.0)
     doc.add('default_control', default_control)
 
@@ -577,7 +577,7 @@ class InstrumentController:
             self.last_control_accum -= k_whole
 
             if self.current_control.type_ == ControlType.WHEEL:
-                mouse.wheel(k_whole * 0.5)
+                mouse.wheel(delta * speed)
                 status = f'wheel! {"+" if k_whole > 0 else ""} (x{speed:.2f})'
             elif  self.current_control.type_ == ControlType.DRAG:
                 if self.dragging:
@@ -677,22 +677,22 @@ class AddInstrumentDialog(wx.Dialog):
 
         sizer.AddSpacer(intermargin)
 
-        mouseControlLabel = wx.StaticText(self) 
-        mouseControlLabel.SetLabelMarkup('<b>Mouse control</b>')
-        mouseControlDescr = wx.StaticText(self) 
-        mouseControlDescr.SetLabelMarkup('<i>How does the mouse adjust controls?</i>')
-        sizer.Add(mouseControlLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
-        sizer.AddSpacer(smallmargin)
-        sizer.Add(mouseControlDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
-        sizer.AddSpacer(smallmargin)
-        choices = [
-            "mouse drag (up and down)",
-            "mouse wheel (prefer this if both are supported)"
-        ]
-        self.mousectrl_combo = wx.ComboBox(self, id=wx.ID_ANY, choices=choices, style=wx.CB_READONLY)
-        sizer.Add(self.mousectrl_combo, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
-
-        sizer.AddSpacer(intermargin)
+        # mouseControlLabel = wx.StaticText(self) 
+        # mouseControlLabel.SetLabelMarkup('<b>Mouse control</b>')
+        # mouseControlDescr = wx.StaticText(self) 
+        # mouseControlDescr.SetLabelMarkup('<i>How does the mouse adjust controls?</i>')
+        # sizer.Add(mouseControlLabel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        # sizer.AddSpacer(smallmargin)
+        # sizer.Add(mouseControlDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        # sizer.AddSpacer(smallmargin)
+        # choices = [
+        #     "mouse drag (up and down)",
+        #     "mouse wheel (prefer this if both are supported)"
+        # ]
+        # self.mousectrl_combo = wx.ComboBox(self, id=wx.ID_ANY, choices=choices, style=wx.CB_READONLY)
+        # sizer.Add(self.mousectrl_combo, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        #
+        # sizer.AddSpacer(intermargin)
 
         filenameDescr = wx.StaticText(self)
         filenameDescr.SetLabelMarkup('<i>Choose instrument configuration save file. The filename must start with "inst-" and end with ".txt".</i>')
@@ -772,8 +772,7 @@ class AddInstrumentDialog(wx.Dialog):
             dlg.Destroy()
             return
 
-        mouse_control = control_type_bij.str([ControlType.DRAG, ControlType.WHEEL][self.mousectrl_combo.GetCurrentSelection()])
-        doc = toml_instrument_config(self.extract_result, window_contains, mouse_control)
+        doc = toml_instrument_config(self.extract_result, window_contains, 'drag')
         with open(path, 'w') as f:
             f.write(doc.as_string())
 
