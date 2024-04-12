@@ -640,7 +640,7 @@ class AddInstrumentDialog(wx.Dialog):
         sizer.AddSpacer(smallmargin)
         sizer.Add(cpSizer, 0, wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
-        self.selectScreenshot = wx.FilePickerCtrl(self, style=wx.FLP_OPEN, message="Select a cropped screenshot of instrument", wildcard=".png")
+        self.selectScreenshot = wx.FilePickerCtrl(self, style=wx.FLP_OPEN, message="Select a cropped screenshot of instrument", wildcard="*.png")
         self.selectScreenshot.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_screenshot_selected)
         filepicker_set_button_label(self.selectScreenshot, 'Analyze Screenshot')
 
