@@ -420,6 +420,8 @@ class Dispatcher(threading.Thread):
                 else:
                     msg = f"Could not open MIDI port \"{port_name}\""
                     wx.CallAfter(self.frame.show_error, msg)
+                    # TODO:
+                    # wx.CallAfter(self.frame.set_midi_selection, None, None)
 
             elif cmd == InternalCommand.UPDATE_WINDOW:
                 name = item[1]
@@ -775,7 +777,7 @@ class AddInstrumentDialog(wx.Dialog):
         self.EndModal(0)
 
 class MainWindow(wx.Frame):
-    def __init__(self, parent, title, q, midiin, ports, config, instruments):
+    def __init__(self, parent, title, q, ports, config, instruments):
         wx.Frame.__init__(self, parent, title=title)
 
         self.panel = wx.Panel(self, wx.ID_ANY)
@@ -786,7 +788,6 @@ class MainWindow(wx.Frame):
 
         self.queue = q
 
-        self.midiin = midiin
         self.ports = ports
 
         value = ""
@@ -795,7 +796,7 @@ class MainWindow(wx.Frame):
 
         channel_choices = ["All"] + [f"Ch. {i}" for i in range(1, 17)]
         value = ""
-        value = channel_choices[config.preferred_midi_channel]
+        # value = channel_choices[config.preferred_midi_channel]
         self.channel_dropdown = wx.ComboBox(self.panel, id=wx.ID_ANY, value=value, choices=channel_choices, style=wx.CB_READONLY)
         self.Bind(wx.EVT_COMBOBOX, self.handle_midi_channel_choice, self.channel_dropdown)
 
@@ -894,8 +895,7 @@ class MainWindow(wx.Frame):
 
     def set_midi_selection(self, port_name, port_number):
         self.port_dropdown.SetValue(port_name)
-        # TODO
-        # self.channel_dropdown.SetValue(port_number)
+        self.channel_dropdown.SetSelection(port_number)
 
 
 def matches_name(window, name_pattern):
@@ -1187,22 +1187,24 @@ def main():
 
         midiin = rtmidi.MidiIn()
         ports = midiin.get_ports()
-        if config.preferred_midi_port is not None:
-            (success, exc) = open_midi_port(midiin, config.preferred_midi_port)
+
 
         instruments = load_instruments()
 
-        frame = MainWindow(None, "pointer-cc", q, midiin, ports, config, instruments)
-
-        if success:
-            midi_channel = config.preferred_midi_channel or 0
-            wx.CallAfter(frame.set_midi_selection, config.preferred_midi_port, midi_channel)
+        frame = MainWindow(None, "pointer-cc", q, ports, config, instruments)
 
         polling = WindowPolling(q, list(instruments.keys()))
         polling.start()
 
         dispatcher = Dispatcher(midiin, q, frame, instruments, config)
         dispatcher.start()
+
+        if config.preferred_midi_port is not None:
+            q.put((InternalCommand.CHANGE_MIDI_PORT, config.preferred_midi_port))
+
+        if config.preferred_midi_channel is not None:
+            q.put((InternalCommand.CHANGE_MIDI_CHANNEL, config.preferred_midi_channel))
+
     except Exception as e:
         traceback.print_exc()
 
