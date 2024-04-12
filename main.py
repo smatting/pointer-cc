@@ -187,6 +187,17 @@ class Instrument:
                 d_best = d
         return c_best
 
+def overlaps(p1, p2):
+    if p1[0] > p2[0]:
+        p1, p2 = p2, p1
+    return p2[0] <= p1[1]
+
+def find_overlapping(spans, p):
+    for p_span in spans:
+        if overlaps(p_span, p):
+            return spans[p_span]
+    return None
+
 def find_markings(im, marker_color, update_percent):
     boxes = []
     spans_last = {}
@@ -196,7 +207,6 @@ def find_markings(im, marker_color, update_percent):
         xmax = None
         spans = {}
         for x in range(0, im.width):
-
             in_marker = im.getpixel((x, y)) == marker_color
             if in_marker:
                 if xmin is None:
@@ -204,9 +214,11 @@ def find_markings(im, marker_color, update_percent):
                 xmax = x
 
             if (not in_marker and xmax is not None) or (in_marker and x == im.width - 1):
-                b = spans_last.get((xmin, xmax))
+                b = find_overlapping(spans_last, (xmin, xmax))
                 if b is not None:
                     b.ymax = y
+                    b.xmin = min(b.xmin, xmin)
+                    b.xmax = max(b.xmax, xmax)
                 else:
                     b = Box(xmin, xmax, y, y)
                     boxes.append(b)
@@ -565,7 +577,7 @@ class InstrumentController:
             self.last_control_accum -= k_whole
 
             if self.current_control.type_ == ControlType.WHEEL:
-                mouse.wheel(k_whole)
+                mouse.wheel(k_whole * 0.5)
                 status = f'wheel! {"+" if k_whole > 0 else ""} (x{speed:.2f})'
             elif  self.current_control.type_ == ControlType.DRAG:
                 if self.dragging:

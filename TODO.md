@@ -1,4 +1,4 @@
-TODOS:
+First release:
 - [x] Use TOML instead of YAML
 - [x] free MIDI bindings
 - [x] add support for drag-controlled vsts
@@ -14,10 +14,14 @@ TODOS:
 - [x] rename controllers to controls
 - [x] windows version (https://github.com/mhammond/pywin32 ?)
 - [x] x istrument(s) configured
-- [ ] use pyinstaller instead of py2exe?
-- [ ] allow for markers in any shape, not just rectangles
+- [x] fix bug (win32): .png files not shown
+- [x] allow for markers in any shape, not just rectangles
+- [ ] fix: wheel control has low resoluion
+- [ ] use pyinstaller also for mac?
 - [ ] write documentation
 - [ ] Sign app with developer id
 - [ ] license
 - [ ] create video
+
+
 - [ ] show nice config error messages, handle gracefully
