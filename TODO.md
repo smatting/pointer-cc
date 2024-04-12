@@ -12,10 +12,12 @@ TODOS:
 - [x] warn user when no instruments are configured
 - [x] fix: ZeroDivisionError: float division by zero
 - [x] rename controllers to controls
+- [ ] use pyinstallier instead of py2exe?
 - [ ] allow for markers in any shape, not just rectangles
 - [ ] write documentation
 - [ ] Sign app with developer id
 - [ ] license
 - [ ] create video
+- [ ] x istrument(s) configured
 - [ ] windows version (https://github.com/mhammond/pywin32 ?)
 - [ ] show nice config error messages, handle gracefully
