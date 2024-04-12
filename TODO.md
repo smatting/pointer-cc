@@ -16,12 +16,14 @@ First release:
 - [x] x istrument(s) configured
 - [x] fix bug (win32): .png files not shown
 - [x] allow for markers in any shape, not just rectangles
-- [ ] fix: wheel control has low resoluion
+- [x] fix: wheel control has low resoluion (fix by removing)
+- [ ] Sign app with developer id
 - [ ] use pyinstaller also for mac?
 - [ ] write documentation
-- [ ] Sign app with developer id
 - [ ] license
 - [ ] create video
 
 
+next:
 - [ ] show nice config error messages, handle gracefully
+- [ ] reload config button / automatic reload
