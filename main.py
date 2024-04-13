@@ -325,15 +325,14 @@ class Dispatcher(threading.Thread):
 
         self.port_name = None
         self.midi_channel= 0
-        if config.preferred_midi_channel is not None:
-            self.midi_channel = config.preferred_midi_channel
-
-        self.instruments = instruments
         self.controllers = {}
         self.config = config
+        self.instruments = {}
+        self.set_instruments(instruments)
 
-        if len(self.instruments) == 0:
-            self.frame.set_window_text("No instruments configured, please read the docs")
+        self.polling = None
+
+
 
     def get_active_controller(self):
         if len(self.controllers) == 0:
@@ -419,9 +418,21 @@ class Dispatcher(threading.Thread):
 
         except Exception as e:
             traceback.print_exception(e)
+    
+    def set_instruments(self, instruments):
+        if len(instruments) == 0:
+            msg = "No instruments configured, please read the docs"
+        else:
+            msg = f'{len(instruments)} instruments configured' 
+
+        self.instruments = instruments
+        wx.CallAfter(self.frame.set_window_text, msg)
 
     def run(self):
         self.midiin.set_callback(self)
+
+        self.polling = WindowPolling(self.queue, list(self.instruments.keys()))
+        self.polling.start()
 
         running = True
         while running:
@@ -429,6 +440,10 @@ class Dispatcher(threading.Thread):
             cmd = item[0]
             if cmd == InternalCommand.QUIT:
                 running = False
+
+                if self.polling:
+                    self.polling.event.set()
+                    self.polling.join()
 
             elif cmd == InternalCommand.CHANGE_MIDI_CHANNEL:
                 self.midi_channel = item[1]
@@ -815,12 +830,10 @@ class AddInstrumentDialog(wx.Dialog):
         self.EndModal(0)
 
 class MainWindow(wx.Frame):
-    def __init__(self, parent, title, q, ports, config, instruments):
+    def __init__(self, parent, title, q, ports):
         wx.Frame.__init__(self, parent, title=title)
 
         self.panel = wx.Panel(self, wx.ID_ANY)
-
-        self.config = config
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
@@ -885,12 +898,6 @@ class MainWindow(wx.Frame):
 
         self.update_view('(no MIDI received yet)', '')
 
-        if len(instruments) == 0:
-            msg_inital_msg = 'no instruments configured, please read docs'
-        else:
-            msg_inital_msg = f'{len(instruments)} instruments configured' 
-        self.set_window_text(msg_inital_msg)
-
         self.Show()
 
     def on_help(self, event):
@@ -950,10 +957,14 @@ def matches_name(window, name_pattern):
 class WindowPolling(threading.Thread):
     def __init__(self, queue, patterns):
         super(WindowPolling, self).__init__()
-        self.patterns = patterns
         self.queue = queue
 
         self.event = threading.Event()
+        self.windows = {}
+        self.set_patterns(patterns)
+
+    def set_patterns(self, patterns):
+        self.patterns = patterns
         self.windows = {}
 
     def run(self):
@@ -1217,22 +1228,17 @@ def main():
     try:
         initialize_config()
 
-        config = Config.load(userfile('config.txt'))
-
         core_platform.init()
+
+        config = Config.load(userfile('config.txt'))
+        instruments = load_instruments()
 
         q = queue.Queue()
 
         midiin = rtmidi.MidiIn()
         ports = midiin.get_ports()
 
-
-        instruments = load_instruments()
-
-        frame = MainWindow(None, "pointer-cc", q, ports, config, instruments)
-
-        polling = WindowPolling(q, list(instruments.keys()))
-        polling.start()
+        frame = MainWindow(None, "pointer-cc", q, ports)
 
         dispatcher = Dispatcher(midiin, q, frame, instruments, config)
         dispatcher.start()
@@ -1247,10 +1253,6 @@ def main():
         traceback.print_exc()
 
     app.MainLoop()
-
-    if polling:
-        polling.event.set()
-        polling.join()
 
     if dispatcher:
         dispatcher.join()
