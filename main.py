@@ -84,14 +84,15 @@ def in_context(f, context):
 
 control_type_bij = Bijection('str', 'enum', [('wheel', ControlType.WHEEL), ('drag', ControlType.DRAG), ('click', ControlType.CLICK)])
 
-class Controller:
-    def __init__(self, type_, i, x, y, speed, m):
+class Control:
+    def __init__(self, type_, i, x, y, speed, m, time_resolution):
         self.type_ = type_
         self.i = i
         self.x = x
         self.y = y
         self.speed = speed
         self.m = m
+        self.time_resolution = time_resolution
 
     def __eq__(self, other):
         return self.i == other.i
@@ -101,7 +102,7 @@ class Controller:
         return f'{self.i}({type_str})'
 
     @staticmethod
-    def parse(d, i, default_wheel_speed, default_drag_speed, default_type, context):
+    def parse(d, i, default, context):
         try:
             x_s = expect_value(d, "x")
             x = expect_decimal(x_s)
@@ -109,16 +110,21 @@ class Controller:
             y_s = expect_value(d, "y")
             y = expect_decimal(y_s)
 
+            default_type = control_type_bij.enum(default['type'])
             type_= maybe(d.get('type'), control_type_bij.enum, default_type)
         
             m = maybe(d.get('m'), expect_float, 1.0)
 
             if type_ == ControlType.WHEEL:
-                speed = default_wheel_speed
+                d = default['wheel']
+                speed = d['speed']
+                time_resolution = d['time_resolution']
             else:
-                speed = default_drag_speed
+                d = default['drag']
+                speed = d['speed']
+                time_resolution = 100
 
-            return Controller(type_, i, x, y, speed, m)
+            return Control(type_, i, x, y, speed, m, time_resolution)
 
         except ConfigError as ce:
             ce.msg = ce.msg + f", {context}"
@@ -152,20 +158,20 @@ class Instrument:
 
             box = Box(0, width, 0, height)
 
-            dc = expect_value(d, 'default_control')
-            type_s = expect_value(dc, "type")
-            default_type = control_type_bij.enum(type_s)
+            default = expect_value(d, 'default')
+            type_s = expect_value(default, "type")
 
-            wheel_speed_s = expect_value(dc, "wheel_speed")
-            default_wheel_speed = in_context(lambda: expect_float(wheel_speed_s), 'wheel_speed')
+            default_wheel = expect_value(default, 'wheel')
+            expect_value(default_wheel, 'speed')
+            expect_value(default_wheel, 'time_resolution')
 
-            drag_speed_s = expect_value(dc, "drag_speed")
-            default_drag_speed = in_context(lambda: expect_float(drag_speed_s), 'drag_speed')
+            default_drag = expect_value(default, 'drag')
+            expect_value(default_drag, 'speed')
 
             controls_unparsed = expect_value(d, 'controls')
             for control_id, v in controls_unparsed.items():
                 context = "for control {control_id}"
-                c = Controller.parse(v, control_id, default_wheel_speed, default_drag_speed, default_type, context)
+                c = Control.parse(v, control_id, default, context)
                 controls.append(c)
 
             window = expect_value(d, 'window')
@@ -266,9 +272,17 @@ def toml_instrument_config(extract_result, window_contains, control_type):
 
     default_control = tomlkit.table()
     default_control.add('type', control_type)
-    default_control.add('wheel_speed', 1.0)
-    default_control.add('drag_speed', 1.0)
-    doc.add('default_control', default_control)
+
+    default_drag = tomlkit.table()
+    default_drag.add('speed', 1.0)
+    default_drag.add('time_resolution', 100)
+    default_control.add('drag', default_drag)
+
+    default_wheel = tomlkit.table()
+    default_wheel.add('speed', 1.0)
+    default_control.add('wheel', default_wheel)
+
+    doc.add('default', default_control)
 
     controls = tomlkit.table()
     for cid, c in extract_result['controls'].items():
@@ -582,9 +596,11 @@ class InstrumentController:
                     self.last_t = t
                 else:
                     time_delta = t - self.last_t
-                    if time_delta > 0.01:
-                        mouse.wheel(self.last_control_accum)
-                        status = f'wheel! {"+" if self.last_control_accum > 0 else ""}{self.last_control_accum:.2f} (x{speed:.2f})'
+                    time_delta_res = 1.0 / self.current_control.time_resolution
+                    if time_delta > time_delta_res:
+                        if time_delta < 5 * time_delta_res:
+                            mouse.wheel(self.last_control_accum)
+                            status = f'wheel! {"+" if self.last_control_accum > 0 else ""}{self.last_control_accum:.2f} (x{speed:.2f})'
                         self.last_control_accum = 0
                         self.last_t = t
             elif  self.current_control.type_ == ControlType.DRAG:
@@ -696,8 +712,8 @@ class AddInstrumentDialog(wx.Dialog):
         sizer.Add(mouseControlDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
         choices = [
-            "mouse drag (up and down)",
-            "mouse wheel (prefer this if both are supported)"
+            "mouse drag up and down (prefer this if both are supported)",
+            "mouse wheel"
         ]
         self.mousectrl_combo = wx.ComboBox(self, id=wx.ID_ANY, choices=choices, style=wx.CB_READONLY)
         sizer.Add(self.mousectrl_combo, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
