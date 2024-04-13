@@ -519,6 +519,7 @@ class InstrumentController:
         self.last_cc = None
         self.last_control = None
         self.last_control_accum = 0.0
+        self.last_t = None
         self.dragging = False
         
         self.click_sm = ClickStateMachine(1.0, 2)
@@ -550,15 +551,17 @@ class InstrumentController:
         self.current_control = self.instrument.find_closest_control(self.mx, self.my)
         
         if self.last_control is not None:
-            if self.last_control != self.current_control:
+            if self.current_control != self.last_control:
                 self.click_sm.reset()
                 self.last_cc = cc
                 self.last_control_accum = 0.0
+                self.last_t = None
 
         if self.last_cc is None:
             self.last_cc = cc
 
         delta = cc - self.last_cc
+        t = time.time()
 
         if self.freewheeling:
             if self.freewheeling_direction is None:
@@ -573,20 +576,27 @@ class InstrumentController:
                 speed = self.current_control.speed * self.current_control.m
 
             self.last_control_accum += delta * speed
-            k_whole = int(self.last_control_accum)
-            self.last_control_accum -= k_whole
 
             if self.current_control.type_ == ControlType.WHEEL:
-                mouse.wheel(k_whole * 0.5)
-                status = f'wheel! {"+" if k_whole > 0 else ""} (x{speed:.2f})'
+                if self.last_t is None:
+                    self.last_t = t
+                else:
+                    time_delta = t - self.last_t
+                    if time_delta > 0.01:
+                        mouse.wheel(self.last_control_accum)
+                        status = f'wheel! {"+" if self.last_control_accum > 0 else ""}{self.last_control_accum:.2f} (x{speed:.2f})'
+                        self.last_control_accum = 0
+                        self.last_t = t
             elif  self.current_control.type_ == ControlType.DRAG:
                 if self.dragging:
                     pass
                 else:
                     mouse.press()
                     self.dragging = True
+                k_whole = int(self.last_control_accum)
                 mouse.move(screen_x, screen_y - k_whole)
                 status = f'drag! {"+" if k_whole > 0 else ""}{k_whole} (x{speed:.2f})'
+                self.last_control_accum -= k_whole
             elif self.current_control.type_ == ControlType.CLICK:
                 is_click = self.click_sm.on_cc(cc, time.time())
                 if is_click:
