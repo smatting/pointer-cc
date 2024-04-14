@@ -21,12 +21,12 @@ First release:
 - [x] pick from multiple windows
 - [x] control settings: time_resolution etc
 - [x] show nice config error messages, handle gracefully
+- [x] license
 - [ ] Sign mac release with developer id
 - [ ] Self-sign windows application
 - [ ] Installer for win32
 - [ ] use pyinstaller also for mac?
 - [ ] write documentation
-- [ ] license
 - [ ] create video
 
 next:
