@@ -35,7 +35,7 @@ app_name = "pointer-cc"
 app_author = "smatting"
 app_url = "https://github.com/smatting/pointer-cc/"
 
-InternalCommand = Enum('InternalCommand', ['QUIT', 'CHANGE_MIDI_PORT',  'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW'])
+InternalCommand = Enum('InternalCommand', ['QUIT', 'CHANGE_MIDI_PORT',  'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW', 'RELOAD_ALL_CONFIGS'])
 
 class Bijection:
     def __init__(self, a_name, b_name, atob_pairs):
@@ -259,7 +259,7 @@ def analyze(self, filename, marker_color=(255, 0, 255, 255)):
 
 def toml_instrument_config(extract_result, window_contains, control_type):
     doc = tomlkit.document()
-    doc.add(tomlkit.comment('The pointer-cc configuration file is of TOML format (https://toml.io). See the pointer-cc documentation for details.'))
+    doc.add(tomlkit.comment(f'The is pointer-cc instrument configuration file. Please edit it to change it, then pick "Reload Config" from the menu for your changes to take effect. See the pointer-cc documentation for details: {app_url}.'))
 
     window = tomlkit.table()
     window.add('contains', window_contains)
@@ -317,22 +317,32 @@ def fmt_midi(msg):
         return ' '.join(parts)
 
 class Dispatcher(threading.Thread):
-    def __init__(self, midiin, queue, frame, instruments, config):
+    def __init__(self, midiin, queue, frame):
         super(Dispatcher, self).__init__()
         self.midiin = midiin
         self.queue = queue
         self.frame = frame
-
         self.port_name = None
         self.midi_channel= 0
         self.controllers = {}
+        self.polling = None
+        self.reload_all_configs()
+
+    def reload_all_configs(self):
+        config = load_config()
+        instruments = load_instruments()
+
         self.config = config
-        self.instruments = {}
         self.set_instruments(instruments)
 
-        self.polling = None
+        if config.preferred_midi_port is not None:
+            self.queue.put((InternalCommand.CHANGE_MIDI_PORT, config.preferred_midi_port, False))
 
+        if config.preferred_midi_channel is not None:
+            self.queue.put((InternalCommand.CHANGE_MIDI_CHANNEL, config.preferred_midi_channel))
 
+        self.stop_window_polling()
+        self.start_window_polling()
 
     def get_active_controller(self):
         if len(self.controllers) == 0:
@@ -428,11 +438,18 @@ class Dispatcher(threading.Thread):
         self.instruments = instruments
         wx.CallAfter(self.frame.set_window_text, msg)
 
-    def run(self):
-        self.midiin.set_callback(self)
-
+    def start_window_polling(self):
         self.polling = WindowPolling(self.queue, list(self.instruments.keys()))
         self.polling.start()
+
+    def stop_window_polling(self):
+        if self.polling:
+            self.polling.event.set()
+            self.polling.join()
+
+    def run(self):
+        self.midiin.set_callback(self)
+        self.start_window_polling()
 
         running = True
         while running:
@@ -440,10 +457,7 @@ class Dispatcher(threading.Thread):
             cmd = item[0]
             if cmd == InternalCommand.QUIT:
                 running = False
-
-                if self.polling:
-                    self.polling.event.set()
-                    self.polling.join()
+                self.stop_window_polling()
 
             elif cmd == InternalCommand.CHANGE_MIDI_CHANNEL:
                 self.midi_channel = item[1]
@@ -452,6 +466,7 @@ class Dispatcher(threading.Thread):
 
             elif cmd == InternalCommand.CHANGE_MIDI_PORT:
                 port_name = item[1]
+                triggered_by_user = item[2]
                 (success, exc) = open_midi_port(self.midiin, port_name)
                 if success:
                     self.port_name = port_name
@@ -459,10 +474,11 @@ class Dispatcher(threading.Thread):
                     self.midiin.set_callback(self)
                     wx.CallAfter(self.frame.set_midi_selection, self.port_name, self.midi_channel)
                 else:
-                    msg = f"Could not open MIDI port \"{port_name}\""
-                    wx.CallAfter(self.frame.show_error, msg)
-                    # TODO:
-                    # wx.CallAfter(self.frame.set_midi_selection, None, None)
+                    if triggered_by_user:
+                        msg = f"Could not open MIDI port \"{port_name}\""
+                        wx.CallAfter(self.frame.show_error, msg)
+                        # TODO:
+                        # wx.CallAfter(self.frame.set_midi_selection, None, None)
 
             elif cmd == InternalCommand.UPDATE_WINDOW:
                 name = item[1]
@@ -478,6 +494,9 @@ class Dispatcher(threading.Thread):
                     self.frame.set_window_text('No window found')
                 else:
                     self.frame.set_window_text(c.window.name)
+
+            elif cmd == InternalCommand.RELOAD_ALL_CONFIGS:
+                self.reload_all_configs()
 
 def unit_affine():
     return Affine(1.0, 1.0, 0.0, 0.0)
@@ -818,7 +837,7 @@ class AddInstrumentDialog(wx.Dialog):
         with open(path, 'w') as f:
             f.write(doc.as_string())
 
-        message = f'"{os.path.basename(path)}" was successfully saved to the configuration directory.\nTo further adjust it you need to open it with a text editor.\nPlease read the documentation on the details of the instrument configuration file. You need to restart pointer-cc for changes to configuration to take effect.'
+        message = f'"{os.path.basename(path)}" was successfully saved to the configuration directory.\nTo further adjust it you need to open it with a text editor.\nPlease read the documentation on the details of the instrument configuration file. Please "Reload Config" in the menu after you\'ve changed config files to take effect.'
         dlg = wx.MessageDialog(None, message, f'Instrument successfully saved', wx.OK | wx.CANCEL)
         dlg.SetOKLabel("Open configuration directory")
         response = dlg.ShowModal()
@@ -859,8 +878,11 @@ class MainWindow(wx.Frame):
 
         filemenu= wx.Menu()
 
-        about = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
-        self.Bind(wx.EVT_MENU, self.on_help, about)
+        # about = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
+        # self.Bind(wx.EVT_MENU, self.on_help, about)
+
+        reload_config = filemenu.Append(wx.ID_ANY, "&Reload config"," Reload all configuration")
+        self.Bind(wx.EVT_MENU, self.reload_config, reload_config)
 
         open_config = filemenu.Append(wx.ID_ANY, "&Open Config Dir"," Open configuartion directory")
         self.Bind(wx.EVT_MENU, self.on_open_config, open_config)
@@ -871,7 +893,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_exit, exitMenutItem)
 
         helpmenu = wx.Menu()
-        get_help = helpmenu.Append(wx.ID_HELP, "Get &Help", "Get Help")
+        get_help = helpmenu.Append(wx.ID_HELP, "Get &Help", "Documentation")
         self.Bind(wx.EVT_MENU, self.on_help, get_help)
 
         menuBar = wx.MenuBar()
@@ -903,6 +925,9 @@ class MainWindow(wx.Frame):
     def on_help(self, event):
         webbrowser.open(app_url)
 
+    def reload_config(self, event):
+        self.queue.put((InternalCommand.RELOAD_ALL_CONFIGS, None))
+
     def on_open_config(self, event):
         open_directory(datadir())
 
@@ -927,7 +952,7 @@ class MainWindow(wx.Frame):
 
     def handle_midi_port_choice(self, event):
         v = self.port_dropdown.GetValue()
-        self.queue.put((InternalCommand.CHANGE_MIDI_PORT, v))
+        self.queue.put((InternalCommand.CHANGE_MIDI_PORT, v, True))
 
     def handle_midi_channel_choice(self, event):
         i = event.GetInt()
@@ -993,7 +1018,7 @@ class WindowPolling(threading.Thread):
 def default_config():
     doc = tomlkit.document()
 
-    doc.add(tomlkit.comment('The pointer-cc configuration file is of TOML format (https://toml.io). See the pointer-cc documentation for details.'))
+    doc.add(tomlkit.comment(f'The is pointer-cc configuration file. Please edit it to change configuration, then pick "Reload Config" from the menu for your changes to take effect. See the pointer-cc documentation for details: {app_url}.'))
 
     bindings = tomlkit.table()
 
@@ -1195,6 +1220,9 @@ def load_instruments():
         d[inst.pattern] = inst
     return d
 
+def load_config():
+    return Config.load(userfile('config.txt'))
+
 def open_directory(path):
     if sys.platform == "win32":
         os.startfile(path)
@@ -1230,9 +1258,6 @@ def main():
 
         core_platform.init()
 
-        config = Config.load(userfile('config.txt'))
-        instruments = load_instruments()
-
         q = queue.Queue()
 
         midiin = rtmidi.MidiIn()
@@ -1240,14 +1265,9 @@ def main():
 
         frame = MainWindow(None, "pointer-cc", q, ports)
 
-        dispatcher = Dispatcher(midiin, q, frame, instruments, config)
+        dispatcher = Dispatcher(midiin, q, frame)
         dispatcher.start()
 
-        if config.preferred_midi_port is not None:
-            q.put((InternalCommand.CHANGE_MIDI_PORT, config.preferred_midi_port))
-
-        if config.preferred_midi_channel is not None:
-            q.put((InternalCommand.CHANGE_MIDI_CHANNEL, config.preferred_midi_channel))
 
     except Exception as e:
         traceback.print_exc()

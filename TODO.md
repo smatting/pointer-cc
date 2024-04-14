@@ -17,13 +17,15 @@ First release:
 - [x] fix bug (win32): .png files not shown
 - [x] allow for markers in any shape, not just rectangles
 - [x] fix: wheel control has low resoluion (fix by removing)
-- [ ] Sign app with developer id
+- [x] reload config button / automatic reload
+- [ ] control settings: time_resolution etc
+- [ ] Sign mac release with developer id
+- [ ] Self-sign windows application
 - [ ] use pyinstaller also for mac?
 - [ ] write documentation
 - [ ] license
 - [ ] create video
 
-
 next:
+- [ ] ci
 - [ ] show nice config error messages, handle gracefully
-- [ ] reload config button / automatic reload
