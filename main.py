@@ -65,7 +65,7 @@ def initialize_config():
     cf = configfile()
     if not os.path.exists(cf):
         with open(cf, 'w') as f:
-            conf = default_config()
+            conf = default_config_toml()
             f.write(conf.as_string())
 
 ControlType = Enum('ControlType', ['WHEEL', 'DRAG','CLICK'])
@@ -110,24 +110,27 @@ class Control:
     def parse(d, i, default, context):
         try:
             x_s = expect_value(d, "x")
-            x = expect_decimal(x_s)
+            x = expect_decimal(x_s, "x")
 
             y_s = expect_value(d, "y")
-            y = expect_decimal(y_s)
+            y = expect_decimal(y_s, "y")
 
             default_type = control_type_bij.enum(default['type'])
             type_= maybe(d.get('type'), control_type_bij.enum, default_type)
         
-            m = maybe(d.get('m'), expect_float, 1.0)
+            m = maybe(d.get('m'), lambda s: expect_float(s, 'm'), 1.0)
 
             if type_ == ControlType.WHEEL:
                 d = default['wheel']
-                speed = d['speed']
-                time_resolution = d['time_resolution']
+                default_speed = d['speed']
+                default_time_resolution = d['time_resolution']
             else:
                 d = default['drag']
-                speed = d['speed']
-                time_resolution = 100
+                default_speed = d['speed']
+                default_time_resolution = 100
+
+            time_resolution = maybe(d.get('time_resolution'), lambda s: expect_decimal(s, 'time_resolution'), default_time_resolution)
+            speed = maybe(d.get('speed'), lambda s: expect_decimal(s, 'speed'), default_speed)
 
             return Control(type_, i, x, y, speed, m, time_resolution)
 
@@ -148,7 +151,7 @@ class Instrument:
         self.controls = controls
 
     @staticmethod
-    def load(path, context):
+    def load(path, instrument_context):
         try:
             controls = []
 
@@ -156,36 +159,36 @@ class Instrument:
                 d = tomlkit.load(f)
 
             dimensions = expect_value(d, 'dimensions')
-            width_s = expect_value(dimensions, 'width')
-            width = expect_decimal(width_s)
-            height_s = expect_value(dimensions, 'height')
-            height = expect_decimal(height_s)
+            width_s = expect_value(dimensions, 'width', 'dimensions')
+            width = expect_decimal(width_s, 'dimensions.width')
+            height_s = expect_value(dimensions, 'height', 'dimensions')
+            height = expect_decimal(height_s, 'dimensions.height')
 
             box = Box(0, width, 0, height)
 
             default = expect_value(d, 'default')
-            type_s = expect_value(default, "type")
+            type_s = expect_value(default, 'type', 'default')
 
-            default_wheel = expect_value(default, 'wheel')
-            expect_value(default_wheel, 'speed')
-            expect_value(default_wheel, 'time_resolution')
+            default_wheel = expect_value(default, 'wheel', 'default')
+            expect_value(default_wheel, 'speed', 'default.wheel')
+            expect_value(default_wheel, 'time_resolution', 'default.wheel')
 
-            default_drag = expect_value(default, 'drag')
-            expect_value(default_drag, 'speed')
+            default_drag = expect_value(default, 'drag', 'default')
+            expect_value(default_drag, 'speed', 'default.drag')
 
             controls_unparsed = expect_value(d, 'controls')
             for control_id, v in controls_unparsed.items():
-                context = "for control {control_id}"
+                context = f"in control \"{control_id}\""
                 c = Control.parse(v, control_id, default, context)
                 controls.append(c)
 
             window = expect_value(d, 'window')
-            pattern = expect_value(window, 'contains')
+            pattern = expect_value(window, 'contains', 'window')
 
             return Instrument(pattern, box, controls)
 
         except ConfigError as ce:
-            raise ConfigError(ce.msg + f", {context}")
+            raise ConfigError(ce.msg + f" in \"{instrument_context}\"")
 
 
     def find_closest_control(self, mx, my):
@@ -331,23 +334,29 @@ class Dispatcher(threading.Thread):
         self.midi_channel= 0
         self.controllers = {}
         self.polling = None
+        self.config = default_config()
+        self.instruments = {}
         self.reload_all_configs()
 
     def reload_all_configs(self):
-        config = load_config()
-        instruments = load_instruments()
+        try:
+            config = load_config()
+            instruments = load_instruments()
+        except ConfigError as e:
+            msg = f'Configuration error: {e}'
+            wx.CallAfter(self.frame.show_error, msg)
+        else:
+            self.config = config
+            self.set_instruments(instruments)
 
-        self.config = config
-        self.set_instruments(instruments)
+            if config.preferred_midi_port is not None:
+                self.queue.put((InternalCommand.CHANGE_MIDI_PORT, config.preferred_midi_port, False))
 
-        if config.preferred_midi_port is not None:
-            self.queue.put((InternalCommand.CHANGE_MIDI_PORT, config.preferred_midi_port, False))
+            if config.preferred_midi_channel is not None:
+                self.queue.put((InternalCommand.CHANGE_MIDI_CHANNEL, config.preferred_midi_channel))
 
-        if config.preferred_midi_channel is not None:
-            self.queue.put((InternalCommand.CHANGE_MIDI_CHANNEL, config.preferred_midi_channel))
-
-        self.stop_window_polling()
-        self.start_window_polling()
+            self.stop_window_polling()
+            self.start_window_polling()
 
     def get_active_controller(self):
         if len(self.controllers) == 0:
@@ -903,7 +912,7 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_exit, exitMenutItem)
 
         helpmenu = wx.Menu()
-        get_help = helpmenu.Append(wx.ID_HELP, "Get &Help", "Documentation")
+        get_help = helpmenu.Append(wx.ID_HELP, "Open Documentation", "Documentation")
         self.Bind(wx.EVT_MENU, self.on_help, get_help)
 
         menuBar = wx.MenuBar()
@@ -1024,8 +1033,7 @@ class WindowPolling(threading.Thread):
             if self.event.is_set():
                 running = False
 
-
-def default_config():
+def default_config_toml():
     doc = tomlkit.document()
 
     doc.add(tomlkit.comment(f'The is pointer-cc configuration file. Please edit it to change configuration, then pick "Reload Config" from the menu for your changes to take effect. See the pointer-cc documentation for details: {app_url}.'))
@@ -1054,6 +1062,11 @@ def default_config():
 
     doc.add('bindings', bindings)
     return doc
+
+def default_config():
+    d = default_config_toml()
+    path = userfile('config.txt')
+    return Config.parse(d, path)
 
 Command = Enum('Command', ['PAN_X', 'PAN_X_INV', 'PAN_Y', 'PAN_Y_INV', 'ADJUST_CONTROL', 'FREEWHEEL'])
 
@@ -1152,30 +1165,33 @@ class Binding:
             command_name = expect_value(d, 'command')
             cmd = cmd_str.command(command_name)
             cc_s = expect_value(d, 'cc')
-            cc = expect_decimal(cc_s)
+            cc = expect_decimal(cc_s, 'cc')
             return Binding(cmd, cc)
         except ConfigError as ce:
             ce.msg = ce.msg + f", {context}"
             raise ce
 
-def expect_value(d, k):
+def expect_value(d, k, context=''):
     v = d.get(k)
     if v is not None:
         return v
     else:
-        raise ConfigError(f'Expected key: \"{k}\"')
+        msg = f'Missing key: \"{k}\"'
+        if context != '':
+            msg += f' in "{context}"'
+        raise ConfigError(msg)
 
-def expect_float(v):
+def expect_float(v, context=''):
     try:
         return float(v)
     except:
-        raise ConfigError(f'Not a float: \"{str(v)}\"')
+        raise ConfigError(f'Not a float: \"{str(v)}\" in \"{context}\"')
 
-def expect_decimal(s):
+def expect_decimal(s, context):
     try:
         return int(s)
     except:
-        raise ConfigError(f"Not a decimal: \"{s}\"")
+        raise ConfigError(f"Not a decimal: \"{s}\" in \"{context}\"")
 
 class Config:
     def __init__(self, config_path, bindings, preferred_midi_port, preferred_midi_channel):
@@ -1201,24 +1217,28 @@ class Config:
             f.write(d.as_string())
 
     @staticmethod
+    def parse(d, path):
+        bindings_cfg = expect_value(d, 'bindings')
+
+        midi = d.get('midi')
+        preferred_midi_port = None
+        preferred_midi_channel = None
+        if midi is not None:
+            preferred_midi_port = midi.get('port')
+            preferred_midi_channel = midi.get('channel')
+
+        bindings = []
+        for bi, b in bindings_cfg.items():
+            bing = Binding.parse(b, f'parsing binding \"{bi}\"')
+            bindings.append(bing)
+
+        return Config(path, bindings, preferred_midi_port, preferred_midi_channel)
+
+    @staticmethod
     def load(path):
         with open(path, 'r') as f:
             d = tomlkit.load(f)
-            bindings_cfg = expect_value(d, 'bindings')
-
-            midi = d.get('midi')
-            preferred_midi_port = None
-            preferred_midi_channel = None
-            if midi is not None:
-                preferred_midi_port = midi.get('port')
-                preferred_midi_channel = midi.get('channel')
-
-            bindings = []
-            for bi, b in bindings_cfg.items():
-                bing = Binding.parse(b, f'parsing binding \"{bi}\"')
-                bindings.append(bing)
-
-            return Config(path, bindings, preferred_midi_port, preferred_midi_channel)
+            return Config.parse(d, path)
 
 def load_instruments():
     root_dir = datadir()

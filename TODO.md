@@ -18,10 +18,12 @@ First release:
 - [x] allow for markers in any shape, not just rectangles
 - [x] fix: wheel control has low resoluion (fix by removing)
 - [x] reload config button / automatic reload
-- [ ] pick from multiple windows
-- [ ] control settings: time_resolution etc
+- [x] pick from multiple windows
+- [x] control settings: time_resolution etc
+- [x] show nice config error messages, handle gracefully
 - [ ] Sign mac release with developer id
 - [ ] Self-sign windows application
+- [ ] Installer for win32
 - [ ] use pyinstaller also for mac?
 - [ ] write documentation
 - [ ] license
@@ -29,4 +31,3 @@ First release:
 
 next:
 - [ ] ci
-- [ ] show nice config error messages, handle gracefully
