@@ -3,6 +3,10 @@ __pycache__
 venv*
 dist
 build
+Output
 datadir
+certs
 instruments/*.png
 instruments/*.xcf
+*.spec
+*.envrc*
