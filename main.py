@@ -84,6 +84,11 @@ def in_context(f, context):
 
 control_type_bij = Bijection('str', 'enum', [('wheel', ControlType.WHEEL), ('drag', ControlType.DRAG), ('click', ControlType.CLICK)])
 
+def squared_dist(p1, p2):
+    x1, y1 = p1
+    x2, y2 = p2
+    return (x1 - x2)**2 + (y1 - y2)**2
+
 class Control:
     def __init__(self, type_, i, x, y, speed, m, time_resolution):
         self.type_ = type_
@@ -352,14 +357,19 @@ class Dispatcher(threading.Thread):
             return list(self.controllers.values())[0]
 
         else:
-            # return leftmost; TODO: find the one with center closest to pointer
-            cbest = None
-            xmin = math.inf
-            for c in self.controllers.values():
-                if c.window.box.xmin < xmin:
-                    xmin = c.window.box.xmin
-                    cbest = c
-            return cbest
+
+            x, y = mouse.get_position()
+
+            def sort_key(controller):
+                box = controller.window.box
+                key_contains = 0 if box.contains(x, y) else 1
+                key_distance = squared_dist(box.center(), (x, y))
+                tpl = (key_contains, key_distance)
+                return tpl
+
+            controllers = list(self.controllers.values())
+            if len(controllers) > 0:
+                return controllers[0]
 
     def __call__(self, event, data=None):
         try:

@@ -24,6 +24,11 @@ class Box:
     def height(self):
         return self.ymax - self.ymin
 
+    def contains_point(self, x, y):
+        x_inside = self.xmin <= x and x <= self.xmax
+        y_inside = self.ymin <= y and y <= self.ymax
+        return x_inside and y_inside
+
 def make_box(x, y, width, height):
     return box(x, x + width, y, y + height)
 

@@ -18,6 +18,7 @@ First release:
 - [x] allow for markers in any shape, not just rectangles
 - [x] fix: wheel control has low resoluion (fix by removing)
 - [x] reload config button / automatic reload
+- [ ] pick from multiple windows
 - [ ] control settings: time_resolution etc
 - [ ] Sign mac release with developer id
 - [ ] Self-sign windows application
