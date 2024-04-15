@@ -46,7 +46,7 @@ jobs:
 
           security find-identity -vp codesigning $KEYCHAIN_PATH
 
-          echo "meh" > foo.txt; cert_name="Developer ID Application: Stefan Matting (FPDFQ974RQ)"; codesign --force --verify --verbose=100 --sign "$cert_name" -k "$KEYCHAIN_PATH" foo.txt
+          echo "meh" > foo.txt; cert_name="Developer ID Application: Stefan Matting (FPDFQ974RQ)"; codesign --force --verify --verbose=100 --sign "$cert_name" ---keychain "$KEYCHAIN_PATH" foo.txt
 
 
       # - uses: actions/setup-python@v5
