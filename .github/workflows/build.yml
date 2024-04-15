@@ -43,25 +43,18 @@ jobs:
           # check that we have a valid codesigning cert
           security find-identity -vp codesigning $KEYCHAIN_PATH
 
-          echo "meh" > foo.txt; CERT_NAME="Developer ID Application: Stefan Matting (FPDFQ974RQ)";
-          echo "first"
-          codesign --force --verify --verbose=100 --sign "$CERT_NAME" --keychain "$KEYCHAIN_PATH" foo.txt
-          echo "second"
-          codesign --force --verify --verbose=100 --sign "$CERT_NAME" foo.txt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-
-      # - uses: actions/setup-python@v5
-      #   with:
-      #     python-version: '3.10'
-      #
-      # - shell: bash
-      #   env:
-      #     POINTER_CC_VERSION: ${{ env.POINTER_CC_VERSION }} 
-      #   run: |
-      #     python3 --version
-      #     python3 -m venv venv
-      #     source venv/bin/activate
-      #     pip install -r requirements.txt
-      #     pip install -r requirements-stage2.txt
-      #     ./scripts/build.sh
-      #     ./scripts/package-mac.sh
+      - shell: bash
+        env:
+          POINTER_CC_VERSION: ${{ env.POINTER_CC_VERSION }} 
+        run: |
+          python3 --version
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          pip install -r requirements-stage2.txt
+          ./scripts/build.sh
+          ./scripts/package-mac.sh
