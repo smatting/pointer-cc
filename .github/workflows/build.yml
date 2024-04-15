@@ -31,8 +31,11 @@ jobs:
           rm -f /tmp/DEV_KEY_P12.p12
           echo "succesfully imported"
           security find-certificate
+          #
+          # Developer ID Application: Stefan Matting (FPDFQ974RQ)
+          # Developer ID Application: Stefan Matting (FPDFQ974RQ)
 
-          echo "meh" > foo.txt; cert_name="Developer ID Application: Stefan Matting (FPDFQ974RQ)"; codesign --force --verify --verbose --sign "$cert_name" foo.txt
+          echo "meh" > foo.txt; cert_name="Developer ID Application: Stefan Matting (FPDFQ974RQ)"; codesign --force --verify --verbose=100 --sign "$cert_name" foo.txt
 
       # - uses: actions/setup-python@v5
       #   with:
