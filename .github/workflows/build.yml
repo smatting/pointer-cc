@@ -58,3 +58,9 @@ jobs:
           pip install -r requirements-stage2.txt
           ./scripts/build.sh
           ./scripts/package-mac.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: disk-image
+          path: dist/*.dmg
