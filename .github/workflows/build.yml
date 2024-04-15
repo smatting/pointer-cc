@@ -23,6 +23,13 @@ jobs:
           echo -n "$DEVELOPER_ID_APPLICATION_PEM" > /tmp/dev_id_app.pem
           echo -n "$DEV_KEY_P12_B64" | base64 -d > /tmp/DEV_KEY_P12.p12
           pw=$(echo -n "$DEV_KEY_P12_W")
+
+          echo security list-keychains
+          security list-keychains
+
+          echo security show-keychain-info $HOME/Library/Keychains/login.keychain
+          security show-keychain-info $HOME/Library/Keychains/login.keychain
+
           security import /tmp/DEV_KEY_P12.p12 -k $HOME/Library/Keychains/login.keychain -P "$pw" -A "Stefan Dev Key"
           security import /tmp/dev_id_app.pem -k $HOME/Library/Keychains/login.keychain
           rm -f /tmp/dev_id_app.pem
