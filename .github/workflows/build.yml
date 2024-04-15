@@ -21,7 +21,7 @@ jobs:
           set -exo pipefail
           echo -n "$DEVELOPER_ID_APPLICATION_PEM" > /tmp/DEVELOPER_ID_APPLICATION_PEM
           echo -n "$DEV_KEY_P12_B64" | base64 -d > /tmp/DEV_KEY_P12
-          pw=(echo -n "$DEV_KEY_P12_W")
+          pw=$(echo -n "$DEV_KEY_P12_W")
           security import /tmp/DEV_KEY_P12 -k $HOME/Library/Keychains/login.keychain -P "$pw" -A "Stefan Dev Key"
           security import "$DEVELOPER_ID_APPLICATION_PEM" -k $HOME/Library/Keychains/login.keychain
           rm -f /tmp/DEVELOPER_ID_APPLICATION_PEM
