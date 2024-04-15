@@ -22,38 +22,22 @@ jobs:
           CERTS_P12: ${{ secrets.CERTS_P12 }} 
         run: |
           set -eo pipefail
-          #
-          #####
-         
-          # DEV_KEY_PATH=$RUNNER_TEMP/dev_key.p12
-          # DEV_ID_APP_CERT_PATH=$RUNNER_TEMP/dev_id_app.cer
+          # https://github.com/Apple-Actions/import-codesign-certs/blob/master/src/security.ts
+
           CERTS_PATH=$RUNNER_TEMP/bundle.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing
           KEYCHAIN_PASSWORD=foo
 
-          # import certificate and provisioning profile from secrets
-          # echo -n "$DEV_KEY_P12_B64" | base64 --decode -o $DEV_KEY_PATH
-          # echo -n "$DEVELOPER_ID_APPLICATION_CER_B64" | base64 --decode -o $DEV_ID_APP_CERT_PATH
           echo -n "$CERTS_P12" | base64 -d -o "$CERTS_PATH"
-
 
           # create temporary keychain
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # import certificate to keychain
-          # echo "importing dev key"
-          # security import $DEV_KEY_PATH -P "$DEV_KEY_P12_W" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          # echo "done"
-          # echo "importing dev id app key"
-          # security import $DEV_ID_APP_CERT_PATH -A -t cert -k $KEYCHAIN_PATH
-          # echo "done"
-          #
-          security import "$CERTS_PATH" -P "$DEV_KEY_P12_W" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          security import "$CERTS_PATH" -k $KEYCHAIN_PATH  -f pkcs12 -A -T /usr/bin/codesign -T /usr/bin/security -P "$DEV_KEY_P12_W"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH login.keychain
 
           security find-identity -vp codesigning $KEYCHAIN_PATH
 
