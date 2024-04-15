@@ -7,6 +7,7 @@ on:
 jobs:
   build:
     runs-on: macos-11
+    environment: prod
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,6 +34,8 @@ jobs:
           python-version: '3.10'
 
       - shell: bash
+        env:
+          POINTER_CC_VERSION: ${{ env.POINTER_CC_VERSION }} 
         run: |
           python3 --version
           python3 -m venv venv
