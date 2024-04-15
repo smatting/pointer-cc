@@ -49,7 +49,7 @@ jobs:
 
       - shell: bash
         env:
-          POINTER_CC_VERSION: ${{ env.POINTER_CC_VERSION }} 
+          POINTER_CC_VERSION: ${{ vars.POINTER_CC_VERSION }} 
         run: |
           python3 --version
           python3 -m venv venv
