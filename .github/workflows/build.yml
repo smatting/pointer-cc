@@ -16,42 +16,38 @@ jobs:
         shell: bash
         env:
           DEVELOPER_ID_APPLICATION_PEM: ${{ secrets.DEVELOPER_ID_APPLICATION_PEM }}
+          DEVELOPER_ID_APPLICATION_CER_B64: ${{ secrets.DEVELOPER_ID_APPLICATION_CER_B64 }}
           DEV_KEY_P12_B64: ${{ secrets.DEV_KEY_P12_B64 }}
           DEV_KEY_P12_W: ${{ secrets.DEV_KEY_P12_W }}
-          DEVELOPER_ID_APPLICATION_CER_B64: ${{ secrets.DEVELOPER_ID_APPLICATION_CER_B64 }}
         run: |
-          set -xeo pipefail
-          # echo -n "$DEVELOPER_ID_APPLICATION_PEM" > /tmp/dev_id_app.pem
-          echo -n "$DEVELOPER_ID_APPLICATION_CER_B64" | base64 -d > /tmp/dev_id_app.cer
-
-          echo -n "$DEV_KEY_P12_B64" | base64 -d > /tmp/DEV_KEY_P12.p12
-          pw=$(echo -n "$DEV_KEY_P12_W")
-
-          # echo security list-keychains
-          # security list-keychains
+          set -eo pipefail
           #
-          # echo security show-keychain-info $HOME/Library/Keychains/login.keychain
-          # security show-keychain-info $HOME/Library/Keychains/login.keychain
+          #####
+         
+          DEV_KEY_PATH=$RUNNER_TEMP/dev_key.p12
+          DEV_ID_APP_CERT_PATH=$RUNNER_TEMP/dev_id_app.cer
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=foo
 
-          security import /tmp/DEV_KEY_P12.p12 -k $HOME/Library/Keychains/login.keychain -P "$pw" -A "Stefan Dev Key"
+          # import certificate and provisioning profile from secrets
+          echo -n "$DEV_KEY_P12_B64" | base64 --decode -o $DEV_KEY_PATH
+          echo -n "$DEVELOPER_ID_APPLICATION_CER_B64" | base64 --decode -o $DEV_ID_APP_CERT_PATH
 
-          security import /tmp/dev_id_app.cer -k $HOME/Library/Keychains/login.keychain
-          rm -f /tmp/dev_id_app.pem
-          rm -f /tmp/DEV_KEY_P12.p12
-          echo "succesfully imported"
+          # create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
+          # import certificate to keychain
+          security import $DEV_KEY_PATH -P "$DEV_KEY_P12_W" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security import $DEV_ID_APP_CERT_PATH -A -t cert -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
 
-          sudo launchctl unload /System/Library/LaunchDaemons/com.apple.securityd.plist
-          sudo launchctl load /System/Library/LaunchDaemons/com.apple.securityd.plist
-          # security find-certificate
-          # 
-          # echo security find-identity -vp codesigning $HOME/Library/Keychains/login.keychain
-          security find-identity -vp codesigning $HOME/Library/Keychains/login.keychain
-          #
-          # Developer ID Application: Stefan Matting (FPDFQ974RQ)
-          # Developer ID Application: Stefan Matting (FPDFQ974RQ)
-          #
-          # echo "meh" > foo.txt; cert_name="Developer ID Application: Stefan Matting (FPDFQ974RQ)"; codesign --force --verify --verbose=100 --sign "$cert_name" foo.txt
+          security find-identity -vp codesigning $KEYCHAIN_PATH
+
+          echo "meh" > foo.txt; cert_name="Developer ID Application: Stefan Matting (FPDFQ974RQ)"; codesign --force --verify --verbose=100 --sign "$cert_name" -k "$KEYCHAIN_PATH" foo.txt
+
 
       # - uses: actions/setup-python@v5
       #   with:
