@@ -18,7 +18,7 @@ jobs:
           DEV_KEY_P12_B64: ${{ secrets.DEV_KEY_P12_B64 }}
           DEV_KEY_P12_W: ${{ secrets.DEV_KEY_P12_W }}
         run: |
-          set -eo pipefail
+          set -exo pipefail
           echo -n "$DEVELOPER_ID_APPLICATION_PEM" > /tmp/DEVELOPER_ID_APPLICATION_PEM
           echo -n "$DEV_KEY_P12_B64" | base64 -d > /tmp/DEV_KEY_P12
           pw=(echo -n "$DEV_KEY_P12_W")
