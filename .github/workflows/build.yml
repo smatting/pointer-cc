@@ -31,6 +31,9 @@ jobs:
           rm -f /tmp/DEV_KEY_P12.p12
           echo "succesfully imported"
           security find-certificate
+          
+          echo security find-identity -vp codesigning
+          security find-identity -vp codesigning
           #
           # Developer ID Application: Stefan Matting (FPDFQ974RQ)
           # Developer ID Application: Stefan Matting (FPDFQ974RQ)
