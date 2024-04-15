@@ -23,17 +23,15 @@ jobs:
           echo -n "$DEVELOPER_ID_APPLICATION_PEM" > /tmp/dev_id_app.pem
           echo -n "$DEV_KEY_P12_B64" | base64 -d > /tmp/DEV_KEY_P12.p12
           pw=$(echo -n "$DEV_KEY_P12_W")
-          # security import /tmp/DEV_KEY_P12.p12 -k $HOME/Library/Keychains/login.keychain -P "$pw" -A "Stefan Dev Key"
-          security import /tmp/DEV_KEY_P12.p12 -P "$pw" -A "Stefan Dev Key"
-          # security import /tmp/dev_id_app.pem -k $HOME/Library/Keychains/login.keychain
-          security import /tmp/dev_id_app.pem
+          security import /tmp/DEV_KEY_P12.p12 -k $HOME/Library/Keychains/login.keychain -P "$pw" -A "Stefan Dev Key"
+          security import /tmp/dev_id_app.pem -k $HOME/Library/Keychains/login.keychain
           rm -f /tmp/dev_id_app.pem
           rm -f /tmp/DEV_KEY_P12.p12
           echo "succesfully imported"
           security find-certificate
           
-          echo security find-identity -vp codesigning
-          security find-identity -vp codesigning
+          echo security find-identity -vp codesigning $HOME/Library/Keychains/login.keychain
+          security find-identity -vp codesigning $HOME/Library/Keychains/login.keychain
           #
           # Developer ID Application: Stefan Matting (FPDFQ974RQ)
           # Developer ID Application: Stefan Matting (FPDFQ974RQ)
