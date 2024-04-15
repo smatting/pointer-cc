@@ -35,6 +35,7 @@ jobs:
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
+
           security import "$CERTS_PATH" -k $KEYCHAIN_PATH  -f pkcs12 -A -T /usr/bin/codesign -T /usr/bin/security -P "$DEV_KEY_P12_W"
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychains -d user -s $KEYCHAIN_PATH login.keychain
