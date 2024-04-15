@@ -28,14 +28,16 @@ jobs:
           rm -f /tmp/DEV_KEY_P12.p12
           echo "succesfully imported"
 
-      # - uses: actions/setup-python@v5
-      #   with:
-      #     python-version: '3.10'
-      # - shell: bash
-      #   run: |
-      #     python3 --version
-      #     python3 -m venv venv
-      #     source venv/bin/activate
-      #     pip install -r requirements.txt
-      #     pip install -r requirements-stage2.txt
-      #     ./scripts/build.sh
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - shell: bash
+        run: |
+          python3 --version
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          pip install -r requirements-stage2.txt
+          ./scripts/build.sh
+          ./scripts/package-mac.sh
