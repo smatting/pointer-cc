@@ -43,7 +43,6 @@ jobs:
           rm -f /tmp/DEV_KEY_P12.p12
           echo "succesfully imported"
           # security find-certificate
-          j
           # 
           # echo security find-identity -vp codesigning $HOME/Library/Keychains/login.keychain
           security find-identity -vp codesigning $HOME/Library/Keychains/login.keychain
