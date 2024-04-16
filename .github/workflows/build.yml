@@ -16,14 +16,10 @@ jobs:
       - name: Build
         shell: powershell
         run: |
-          dir
-          cd D:\
-          dir
-          cd a\
-          dir
-
+          choco install windows-sdk-10.1
           signtool
 
+          # choco install 
           # choco install python310 > $null
           #
           # Remove-Item -Force -Recurse -ErrorAction SilentlyContinue venv
