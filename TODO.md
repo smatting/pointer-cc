@@ -26,6 +26,7 @@ First release:
 - [x] Installer for win32
 - [x] use pyinstaller also for mac
 - [ ] ci
+- [ ] new version available check
 - [ ] Self-sign windows application
 - [ ] write documentation
 - [ ] create video
