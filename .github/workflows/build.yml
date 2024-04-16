@@ -18,33 +18,37 @@ jobs:
           SPC_B64: ${{ secrets.SPC_B64 }}
           POINTER_CC_VERSION: ${{ vars.POINTER_CC_VERSION }} 
         run: |
-          $bytes = [System.Convert]::FromBase64String($env:SPC_B64)
-          Set-Content -Path .\StefanMattingSPC.pfx -Value $bytes -Encoding Byte
-          Import-PfxCertificate -FilePath .\StefanMattingSPC.pfx -CertStoreLocation 'Cert:\CurrentUser\My'
-          Remove-Item .\StefanMattingSPC.pfx
+          # $bytes = [System.Convert]::FromBase64String($env:SPC_B64)
+          # Set-Content -Path .\StefanMattingSPC.pfx -Value $bytes -Encoding Byte
+          # Import-PfxCertificate -FilePath .\StefanMattingSPC.pfx -CertStoreLocation 'Cert:\CurrentUser\My'
+          # Remove-Item .\StefanMattingSPC.pfx
+          #
+          # choco install python310 > $null
+          # choco install innosetup
+          #
+          # Remove-Item -Force -Recurse -ErrorAction SilentlyContinue venv
+          #
+          # C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe --version
+          # C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe -m venv venv
+          # cd .\venv\Scripts
+          # ./Activate.ps1
+          # cd ..\..\
 
-          choco install python310 > $null
-          choco install innosetup
+          $env:PATH = " C:\Program Files (x86)\Windows Kits\10\App Certification Kit;" + $env:PATH
 
-          Remove-Item -Force -Recurse -ErrorAction SilentlyContinue venv
+          signtool
 
-          C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe --version
-          C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe -m venv venv
-          cd .\venv\Scripts
-          ./Activate.ps1
-          cd ..\..\
+          # python -m pip install -r requirements.txt
+          # python -m pip install -r requirements-stage2.txt
+          #
+          # & .\scripts\build.ps1
+          # & .\scripts\package-win.ps1
 
-          python -m pip install -r requirements.txt
-          python -m pip install -r requirements-stage2.txt
-
-          & .\scripts\build.ps1
-          & .\scripts\package-win.ps1
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: build
-          path: Output/*.exe
+      # - name: Upload Artifacts
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: build
+      #     path: Output/*.exe
 
 
 
