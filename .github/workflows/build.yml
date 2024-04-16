@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build-win32:
     runs-on: windows-2022
     environment: prod
     steps:
@@ -43,71 +43,65 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: build
+          name: build-results
           path: Output/*.exe
 
+  build-darwin:
+    runs-on: macos-11
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      - name: Import certs
+        shell: bash
+        env:
+          CERTS_P12: ${{ secrets.CERTS_P12 }} 
+          CERTS_P12_PASSWORD: ${{ secrets.CERTS_P12_PASSWORD }} 
+        run: |
+          set -eo pipefail
+          # https://github.com/Apple-Actions/import-codesign-certs/blob/master/src/security.ts
 
+          CERTS_PATH=$RUNNER_TEMP/bundle.p12
+          echo -n "$CERTS_P12" | base64 -d -o "$CERTS_PATH"
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing
+          KEYCHAIN_PASSWORD=foo
 
+          # create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
+          # import and allow all applications to use it
+          security import "$CERTS_PATH" -k $KEYCHAIN_PATH  -f pkcs12 -A -T /usr/bin/codesign -T /usr/bin/security -P "$CERTS_P12_PASSWORD"
+          
+          # magic incantation that is necessary
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-# jobs:
-#   build:
-#     runs-on: macos-11
-#     environment: prod
-#     steps:
-#       - name: Checkout
-#         uses: actions/checkout@v4
-#
-#       - name: Import certs
-#         shell: bash
-#         env:
-#           CERTS_P12: ${{ secrets.CERTS_P12 }} 
-#           CERTS_P12_PASSWORD: ${{ secrets.CERTS_P12_PASSWORD }} 
-#         run: |
-#           set -eo pipefail
-#           # https://github.com/Apple-Actions/import-codesign-certs/blob/master/src/security.ts
-#
-#           CERTS_PATH=$RUNNER_TEMP/bundle.p12
-#           echo -n "$CERTS_P12" | base64 -d -o "$CERTS_PATH"
-#           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing
-#           KEYCHAIN_PASSWORD=foo
-#
-#           # create temporary keychain
-#           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-#           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-#           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-#
-#           # import and allow all applications to use it
-#           security import "$CERTS_PATH" -k $KEYCHAIN_PATH  -f pkcs12 -A -T /usr/bin/codesign -T /usr/bin/security -P "$CERTS_P12_PASSWORD"
-#           
-#           # magic incantation that is necessary
-#           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-#
-#           # also necessary, this command actually sets things (even though the name).
-#           security list-keychains -d user -s $KEYCHAIN_PATH login.keychain
-#
-#           # check that we have a valid codesigning cert
-#           security find-identity -vp codesigning $KEYCHAIN_PATH
-#
-#       - uses: actions/setup-python@v5
-#         with:
-#           python-version: '3.10'
-#
-#       - shell: bash
-#         env:
-#           POINTER_CC_VERSION: ${{ vars.POINTER_CC_VERSION }} 
-#         run: |
-#           python3 --version
-#           python3 -m venv venv
-#           source venv/bin/activate
-#           pip install -r requirements.txt
-#           pip install -r requirements-stage2.txt
-#           ./scripts/build.sh
-#           ./scripts/package-mac.sh
-#
-#       - name: Upload Artifacts
-#         uses: actions/upload-artifact@v2
-#         with:
-#           name: disk-image
-#           path: dist/*.dmg
+          # also necessary, this command actually sets things (even though the name).
+          security list-keychains -d user -s $KEYCHAIN_PATH login.keychain
+
+          # check that we have a valid codesigning cert
+          security find-identity -vp codesigning $KEYCHAIN_PATH
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - shell: bash
+        env:
+          POINTER_CC_VERSION: ${{ vars.POINTER_CC_VERSION }} 
+        run: |
+          python3 --version
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          pip install -r requirements-stage2.txt
+          ./scripts/build.sh
+          ./scripts/package-mac.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-results
+          path: dist/*.dmg
