@@ -12,37 +12,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # choco install innosetup
       - name: Build
         shell: powershell
         run: |
-          Get-ChildItem 'C:\Program Files (x86)\Windows Kits\' -Filter signtool.exe -Recurse
+          choco install python310 > $null
+          choco install innosetup
 
-          choco install windows-sdk-10.1
+          Remove-Item -Force -Recurse -ErrorAction SilentlyContinue venv
 
-          Get-ChildItem 'C:\Program Files (x86)\Windows Kits\' -Filter signtool.exe -Recurse
+          C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe --version
+          C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe -m venv venv
+          cd .\venv\Scripts
+          ./Activate.ps1
+          cd ..\..\
 
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-stage2.txt
 
-
-          # signtool
-
-          # choco install 
-          # choco install python310 > $null
-          #
-          # Remove-Item -Force -Recurse -ErrorAction SilentlyContinue venv
-          #
-          # C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe --version
-          # C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe -m venv venv
-          # cd .\venv\Scripts
-          # ./Activate.ps1
-          # cd ..\..\
-          # 
-          # python -m pip install -r requirements.txt
-          # python -m pip install -r requirements-stage2.txt
-          #
-          # python -m pip freeze
-          #
-          # & .\scripts\build.ps1
+          & .\scripts\build.ps1
 
 
 
