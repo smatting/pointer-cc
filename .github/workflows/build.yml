@@ -16,11 +16,13 @@ jobs:
       - name: Build
         shell: powershell
         run: |
+          Get-ChildItem 'C:\Program Files (x86)\Windows Kits\' -Filter signtool.exe -Recurse
+
           choco install windows-sdk-10.1
-          cd C:\
-          dir
-          cd "C:\Program Files (x86)"
-          dir
+
+          Get-ChildItem 'C:\Program Files (x86)\Windows Kits\' -Filter signtool.exe -Recurse
+
+
 
           # signtool
 
