@@ -11,18 +11,16 @@ codesign --deep --force --verify --verbose --sign "$cert_name" ./dist/pointer-cc
 
 temp_dir=$(mktemp -d)
 
-echo "!!!!!! in temp dir"
-ls -l ./dist/pointer-cc.app/Contents/Resources
-
 cp -R "./dist/pointer-cc.app" "$temp_dir/pointer-cc.app/"
-
-echo "!!!!!! in temp dir"
-ls -l $temp_dir/pointer-cc.app/Contents/Resources
 
 ln -s "/Applications" "$temp_dir/Applications"
 
+tmp_dmg="./tmp.dmg"
+
 hdiutil create -srcfolder "$temp_dir" -volname "pointer-cc $POINTER_CC_VERSION" \
-    -format UDRW -ov -fs HFS+ "$destination_dmg"
+    -format UDRW -ov -fs HFS+ "$tmp_dmg"
+
+hdiutil convert "$tmp_dmg" -format UDZO -o "$destination_dmg"
 
 # Cleanup: Remove the temporary directory
 rm -rf "$temp_dir"
