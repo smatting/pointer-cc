@@ -14,7 +14,7 @@ temp_dir=$(mktemp -d)
 echo "!!!!!! in orig dir"
 ls -l ./dist/pointer-cc.app/Contents/Resources
 
-cp -r "./dist/pointer-cc.app" "$temp_dir/pointer-cc.app"
+cp -ar "./dist/pointer-cc.app" "$temp_dir/pointer-cc.app"
 
 echo "!!!!!! in temp dir"
 ls -l $temp_dir/pointer-cc.app/Contents/Resources
