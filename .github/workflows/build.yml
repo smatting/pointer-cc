@@ -17,7 +17,12 @@ jobs:
         shell: powershell
         run: |
           choco install windows-sdk-10.1
-          signtool
+          cd C:\
+          dir
+          cd "C:\Program Files (x86)"
+          dir
+
+          # signtool
 
           # choco install 
           # choco install python310 > $null
