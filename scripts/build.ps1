@@ -1,5 +1,7 @@
+Remove-Item -Force -Recurse build
+Remove-Item -Force -Recurse dist 
+Remove-Item -Force -Recurse output
+Remove-Item -Force -Recurse Output
 $ErrorActionPreference = 'Stop'
-Remove-Item -Force -Recurse -ErrorAction SilentlyContinue dist
-Remove-Item -Force -Recurse -ErrorAction SilentlyContinue output
-Remove-Item -Force -Recurse -ErrorAction SilentlyContinue Output
-pyinstaller --name pointer-cc --icon ./resources/icon.icns --windowed main.py
+# pyinstaller --name pointer-cc --icon ./resources/icon.icns --windowed main.py
+pyinstaller --name pointer-cc --windowed main.py
