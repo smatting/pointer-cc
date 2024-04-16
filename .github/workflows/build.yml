@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
 
       # choco install innosetup
-      - name: Setup
+      - name: Build
         shell: powershell
         run: |
           choco install python310
@@ -29,10 +29,8 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-stage2.txt
 
-      - name: Build
-        shell: powershell
-        run: |
           .\scripts\build.ps1
+
 
 
 
