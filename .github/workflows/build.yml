@@ -16,6 +16,7 @@ jobs:
         shell: powershell
         env:
           SPC_B64: ${{ secrets.SPC_B64 }}
+          POINTER_CC_VERSION: ${{ vars.POINTER_CC_VERSION }} 
         run: |
           $bytes = [System.Convert]::FromBase64String($env:SPC_B64)
           Set-Content -Path .\StefanMattingSPC.pfx -Value $bytes -Encoding Byte
