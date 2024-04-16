@@ -28,8 +28,9 @@ First release:
 - [x] ci
 - [x] Self-sign windows application
 - [x] fix huge build for mac
-- [ ] github: remove that "deployments" (environments) thingy
-- [ ] icon for windows
+- [x] github: remove that "deployments" (environments) thingy
+- [x] icon for windows
+- [x] fix bug: app doesn't close
 - [ ] new version available check
 - [ ] write documentation
 - [ ] create video

@@ -468,7 +468,6 @@ class Dispatcher(threading.Thread):
 
     def run(self):
         self.midiin.set_callback(self)
-        self.start_window_polling()
 
         running = True
         while running:
