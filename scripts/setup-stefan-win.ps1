@@ -1,8 +1,4 @@
 $ErrorActionPreference = 'Stop'
-
-
-
-python --version
 Remove-Item -Force -Recurse -ErrorAction SilentlyContinue venv
 python -m venv venv
 cd .\venv\Scripts

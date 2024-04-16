@@ -2,7 +2,6 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "pointer-cc"
-#define MyAppVersion "1.0"
 #define MyAppPublisher "Stefan Matting"
 #define MyAppURL "https://github.com/smatting/pointer-cc/"
 #define MyAppExeName "pointer-cc.exe"
@@ -12,8 +11,7 @@
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{E514A077-8868-4277-9A7C-7A6D4CC330E4}
 AppName={#MyAppName}
-AppVersion={#MyAppVersion}
-;AppVerName={#MyAppName} {#MyAppVersion}
+AppVersion={#GetEnv('POINTER_CC_VERSION')}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
@@ -23,7 +21,7 @@ DisableProgramGroupPage=yes
 LicenseFile=LICENSE
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
-OutputBaseFilename=pointer-cc-1.0-install
+OutputBaseFilename=pointer-cc-{#GetEnv('POINTER_CC_VERSION')}-install
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
