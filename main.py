@@ -2,6 +2,9 @@ from PIL import Image
 import wx
 import wx.lib.delayedresult
 import time
+import http.client
+import urllib
+import semver
 import textwrap
 import traceback
 import os
@@ -24,6 +27,7 @@ import re
 import appdirs
 from enum import Enum
 from pointercc.core import Window, Box, make_box
+from pointercc.version import version
 if sys.platform == "win32":
     import pointercc.win32 as core_platform
 elif sys.platform == "darwin":
@@ -34,8 +38,31 @@ else:
 app_name = "pointer-cc"
 app_author = "smatting"
 app_url = "https://github.com/smatting/pointer-cc/"
+url_latest = "https://raw.githubusercontent.com/smatting/pointer-cc/main/latest_release.txt"
 
 InternalCommand = Enum('InternalCommand', ['QUIT', 'CHANGE_MIDI_PORT',  'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW', 'RELOAD_ALL_CONFIGS'])
+
+def https_get(url):
+    try:
+        url_parts = urllib.parse.urlparse(url)
+        connection = http.client.HTTPSConnection(url_parts.netloc)
+        connection.request("GET", url_parts.path)
+        response = connection.getresponse()
+        data = response.read().decode("utf-8")
+        return data
+    except Exception as e:
+        return None
+
+def check_latest():
+    if version == '0.0.0':
+        return
+    latest_version = https_get(url_latest).strip()
+    if latest_version is not None:
+        try:
+            if semver.compare(version, latest_version) < 0:
+                return latest_version
+        except:
+            pass
 
 class Bijection:
     def __init__(self, a_name, b_name, atob_pairs):
