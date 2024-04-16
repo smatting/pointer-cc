@@ -16,9 +16,14 @@ jobs:
       - name: Build
         shell: powershell
         run: |
-          choco install python310
+          choco install python310 > $null
 
           C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe --version
+          C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe -m venv venv
+          cd .\venv\Scripts
+          ./Activate.ps1
+
+          python --version
 
           # python --version
           # Remove-Item -Force -Recurse -ErrorAction SilentlyContinue venv
