@@ -11,10 +11,10 @@ codesign --deep --force --verify --verbose --sign "$cert_name" ./dist/pointer-cc
 
 temp_dir=$(mktemp -d)
 
-echo "!!!!!! in orig dir"
+echo "!!!!!! in temp dir"
 ls -l ./dist/pointer-cc.app/Contents/Resources
 
-cp -ar "./dist/pointer-cc.app" "$temp_dir/pointer-cc.app"
+cp -R "./dist/pointer-cc.app" "$temp_dir/pointer-cc.app/"
 
 echo "!!!!!! in temp dir"
 ls -l $temp_dir/pointer-cc.app/Contents/Resources
