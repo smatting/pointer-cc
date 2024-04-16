@@ -22,9 +22,9 @@ PyGetWindow==0.0.9
 Pygments==2.17.2
 pyinstaller==6.6.0
 pyinstaller-hooks-contrib==2024.4
-pyobjc-core==10.2
-pyobjc-framework-Cocoa==10.2
-pyobjc-framework-Quartz==10.2
+pyobjc-core==10.2; sys_platform == "darwin"
+pyobjc-framework-Cocoa==10.2; sys_platform == "darwin"
+pyobjc-framework-Quartz==10.2; sys_platform == "darwin"
 PyRect==0.2.0
 python-rtmidi==1.5.8
 six==1.16.0
