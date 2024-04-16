@@ -33,7 +33,7 @@ jobs:
 
           python -m pip freeze
 
-          .\scripts\build.ps1
+          & .\scripts\build.ps1
 
 
 
