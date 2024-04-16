@@ -19,6 +19,8 @@ jobs:
           dir
           cd D:\
           dir
+          cd a\
+          dir
           cd "D:\Program Files (x86)"
           dir
 
