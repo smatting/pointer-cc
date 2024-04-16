@@ -33,9 +33,6 @@ jobs:
 
           python -m pip freeze
 
-          dir venv\bin
-
-
           .\scripts\build.ps1
 
 
