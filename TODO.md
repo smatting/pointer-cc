@@ -27,9 +27,9 @@ First release:
 - [x] use pyinstaller also for mac
 - [x] ci
 - [x] Self-sign windows application
+- [x] fix huge build for mac
 - [ ] github: remove that "deployments" (environments) thingy
 - [ ] icon for windows
-- [ ] fix huge build for mac
 - [ ] new version available check
 - [ ] write documentation
 - [ ] create video
