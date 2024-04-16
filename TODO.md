@@ -25,8 +25,10 @@ First release:
 - [x] Sign mac release with developer id
 - [x] Installer for win32
 - [x] use pyinstaller also for mac
-- [ ] ci
+- [x] ci
+- [x] Self-sign windows application
+- [ ] icon for windows
+- [ ] fix huge build for mac
 - [ ] new version available check
-- [ ] Self-sign windows application
 - [ ] write documentation
 - [ ] create video
