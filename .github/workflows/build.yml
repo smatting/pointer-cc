@@ -1,8 +1,10 @@
 name: build
 
+# on:
+#   push:
+#     branches: [ main ]
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-win32:
