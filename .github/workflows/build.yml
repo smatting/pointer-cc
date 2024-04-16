@@ -35,7 +35,8 @@ jobs:
           ./Activate.ps1
           cd ..\..\
 
-          python -m pip install -r requirements.txt
+          # --no-deps: prevent wxpython from pulling numpy
+          python -m pip install --no-deps -r requirements.txt
           python -m pip install -r requirements-stage2.txt
 
           & .\scripts\build.ps1
@@ -97,7 +98,8 @@ jobs:
           python3 --version
           python3 -m venv venv
           source venv/bin/activate
-          pip install -r requirements.txt
+          # --no-deps: prevent wxpython from pulling numpy
+          pip install --no-deps -r requirements.txt
           pip install -r requirements-stage2.txt
           ./scripts/build.sh
           ./scripts/package-mac.sh
