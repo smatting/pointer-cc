@@ -5,7 +5,7 @@ decorator==5.1.1
 exceptiongroup==1.2.0
 executing==2.0.1
 ipdb==0.13.13
-ipython==8.22.2
+ipython==8.18.0
 jedi==0.19.1
 macholib==1.16.3
 matplotlib-inline==0.1.6
