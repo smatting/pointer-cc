@@ -18,25 +18,18 @@ jobs:
         run: |
           choco install python310 > $null
 
+          Remove-Item -Force -Recurse -ErrorAction SilentlyContinue venv
+
           C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe --version
           C:\hostedtoolcache\windows\Python\3.10.11\x64\python.exe -m venv venv
           cd .\venv\Scripts
           ./Activate.ps1
+          cd ..\..\
+          
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-stage2.txt
 
-          python --version
-
-          # python --version
-          # Remove-Item -Force -Recurse -ErrorAction SilentlyContinue venv
-          # python -m venv venv
-          #
-          # cd .\venv\Scripts
-          # ./Activate.ps1
-          # cd ..\..\
-          #
-          # pip install -r requirements.txt
-          # pip install -r requirements-stage2.txt
-          #
-          # .\scripts\build.ps1
+          .\scripts\build.ps1
 
 
 
