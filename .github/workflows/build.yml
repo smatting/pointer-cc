@@ -44,7 +44,7 @@ jobs:
           & .\scripts\package-win.ps1
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: build-results
           path: Output/*.exe
@@ -105,7 +105,7 @@ jobs:
           ./scripts/package-mac.sh
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: build-results
           path: dist/*.dmg
