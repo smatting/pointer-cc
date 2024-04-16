@@ -7,4 +7,4 @@ if (Test-Path -Path dist -PathType Container) {
 }
 
 # pyinstaller --name pointer-cc --icon ./resources/icon.icns --windowed main.py
-pyinstaller --name pointer-cc --windowed main.py
+python -m pyinstaller --name pointer-cc --windowed main.py
