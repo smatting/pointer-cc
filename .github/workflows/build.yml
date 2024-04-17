@@ -96,7 +96,7 @@ jobs:
           elif [ "${{ matrix.target_arch }}" == "arm64" ]; then
             architecture="arm64"
           fi
-          echo "Architecture: $architecture"
+          echo "architecture=$architecture" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v5
         with:
