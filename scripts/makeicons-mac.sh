@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 export ICONDIR="tmp.iconset"
-export ORIGICON=resources/icon.png
+export ORIGICON=resources/logo-big.png
 
 mkdir -p $ICONDIR
 
@@ -17,3 +17,5 @@ done
 
 iconutil -c icns -o resources/icon.icns $ICONDIR
 rm -rf $ICONDIR
+
+
