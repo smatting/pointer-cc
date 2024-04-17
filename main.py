@@ -905,6 +905,11 @@ class MainWindow(wx.Frame):
 
         self.ports = ports
 
+        png = wx.Image('resources/logo-small.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        logo = wx.StaticBitmap(self.panel, -1, png, (10, 10), (png.GetWidth(), png.GetHeight()))
+
+        self.version_label = wx.StaticText(self.panel, label=f'Version {version}', style=wx.ALIGN_CENTRE_HORIZONTAL)
+
         value = ""
         self.port_dropdown = wx.ComboBox(self.panel, id=wx.ID_ANY, value=value, choices=self.ports, style=wx.CB_READONLY)
         self.Bind(wx.EVT_COMBOBOX, self.handle_midi_port_choice, self.port_dropdown)
@@ -946,21 +951,35 @@ class MainWindow(wx.Frame):
         menuBar.Append(helpmenu,"&Help") # Adding the "filemenu" to the MenuBar
         self.SetMenuBar(menuBar)  # Adding the MenuBar to the Frame content.
 
-        midiSizer = wx.BoxSizer(wx.HORIZONTAL)
-        midiSizer.Add(self.port_dropdown, 0, wx.ALL, 0)
-        midiSizer.Add(self.channel_dropdown, 0, wx.ALL, 0)
+        midiChoice = wx.BoxSizer(wx.HORIZONTAL)
+        midiChoice.Add(self.port_dropdown, 0, wx.ALL, 0)
+        midiChoice.Add(self.channel_dropdown, 0, wx.ALL, 0)
 
         self.midi_msg_ctrl = wx.TextCtrl(self.panel, style=wx.TE_READONLY)
 
+        horizontal_margin = 20
+        topbottommargin = 25
+        intermargin = 10
+
         sizer = wx.BoxSizer(wx.VERTICAL)
-        # sizer.Add(self.port_dropdown)
-        # sizer.Add(self.channel_dropdown)
-        sizer.Add(self.window_text_ctrl, 0, wx.EXPAND)
-        sizer.Add(self.ctrlinfo_text_ctrl,  0, wx.EXPAND)
-        sizer.Add(midiSizer)
-        sizer.Add(self.midi_msg_ctrl, 0, wx.EXPAND)
+        sizer.AddSpacer(topbottommargin)
+        sizer.Add(logo, 0, wx.EXPAND)
+        sizer.AddSpacer(intermargin)
+        sizer.Add(self.version_label, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(intermargin)
+        sizer.Add(self.window_text_ctrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(intermargin)
+        sizer.Add(self.ctrlinfo_text_ctrl,  0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(intermargin)
+        sizer.Add(midiChoice, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.Add(self.midi_msg_ctrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+        sizer.AddSpacer(topbottommargin)
+
+        # TODO:maybe 
+        self.sizer = sizer
 
         self.panel.SetSizer(sizer)
+        sizer.SetMinSize((300, 0))
         sizer.Fit(self)
 
         self.update_view('(no MIDI received yet)', '')
@@ -1000,6 +1019,9 @@ class MainWindow(wx.Frame):
         self.queue.put((InternalCommand.CHANGE_MIDI_PORT, v, True))
 
     def handle_midi_channel_choice(self, event):
+        self.version_label.SetLabel("Version 0.0.0 (2.0.0 is available!)")
+        self.sizer.Layout()
+
         i = event.GetInt()
         self.queue.put((InternalCommand.CHANGE_MIDI_CHANNEL, i))
 
