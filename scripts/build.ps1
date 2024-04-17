@@ -6,4 +6,4 @@ if (Test-Path -Path dist -PathType Container) {
   Remove-Item -Force -Recurse dist
 }
 
-pyinstaller --name pointer-cc --icon ./resources/icon.ico --windowed main.py
+pyinstaller --name pointer-cc --icon ./resources/icons.ico --windowed main.py
