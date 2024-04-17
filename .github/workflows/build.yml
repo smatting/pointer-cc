@@ -88,8 +88,18 @@ jobs:
           # check that we have a valid codesigning cert
           security find-identity -vp codesigning $KEYCHAIN_PATH
 
+      - name: Set architecture variable
+        run: |
+          if [ "${{ matrix.target_arch }}" == "x86_64" ]; then
+            architecture="x64"
+          elif [ "${{ matrix.target_arch }}" == "arm64" ]; then
+            architecture="arm64"
+          fi
+          echo "Architecture: $architecture"
+
       - uses: actions/setup-python@v5
         with:
+          architecture: ${{ env.architecture }}
           python-version: '3.10.11'
 
       - shell: bash
