@@ -50,6 +50,9 @@ jobs:
 
   build-darwin:
     runs-on: macos-11
+    strategy:
+      matrix:
+        target_arch: [ x86_64, arm64 ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -92,13 +95,20 @@ jobs:
       - shell: bash
         env:
           POINTER_CC_VERSION: ${{ vars.POINTER_CC_VERSION }} 
+          TARGET_ARCH: ${{ matrix.target_arch }}
         run: |
           python3 --version
           python3 -m venv venv
           source venv/bin/activate
-          # --no-deps: prevent wxpython from pulling numpy
-          pip install --no-deps -r requirements.txt
-          pip install -r requirements-stage2.txt
+
+          if [ "$TARGET_ARCH" = "x86_64" ]; then
+            # --no-deps: prevent wxpython from pulling numpy
+            pip install --no-deps -r requirements.txt
+            pip install -r requirements-stage2.txt
+          else
+            pip install --platform macosx_11_0_arm64 --no-deps --target venv/lib/python3.10/site-packages -r requirements.txt
+            pip install --platform macosx_11_0_arm64 --no-deps --target venv/lib/python3.10/site-packages -r requirements-stage2.txt
+          fi
           ./scripts/build.sh
           ./scripts/package-mac.sh
 

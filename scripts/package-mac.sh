@@ -4,7 +4,7 @@ set -euo pipefail
 
 cert_name="Developer ID Application: Stefan Matting (FPDFQ974RQ)" 
 
-destination_dmg="dist/pointer-cc-$POINTER_CC_VERSION-$(arch).dmg"
+destination_dmg="dist/pointer-cc-$POINTER_CC_VERSION-${TARGET_ARCH:-x86_64}.dmg"
 rm -rf "$destination_dmg"
 
 codesign --deep --force --verify --verbose --sign "$cert_name" ./dist/pointer-cc.app
