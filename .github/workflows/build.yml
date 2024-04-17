@@ -52,8 +52,7 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        # target_arch: [ x86_64, arm64 ]
-        target_arch: [ arm64 ]
+        target_arch: [ x86_64, arm64 ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
