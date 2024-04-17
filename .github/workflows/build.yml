@@ -97,6 +97,8 @@ jobs:
           POINTER_CC_VERSION: ${{ vars.POINTER_CC_VERSION }} 
           TARGET_ARCH: ${{ matrix.target_arch }}
         run: |
+          export TARGET_ARCH
+
           python3 --version
           python3 -m venv venv
           source venv/bin/activate
