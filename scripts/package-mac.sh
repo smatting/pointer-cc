@@ -17,7 +17,7 @@ ln -s "/Applications" "$temp_dir/Applications"
 
 tmp_dmg="./tmp.dmg"
 
-hdiutil create -srcfolder "$temp_dir" -volname "pointer-cc $POINTER_CC_VERSION" \
+hdiutil create -srcfolder "$temp_dir" -volname "pointer-cc $POINTER_CC_VERSION ${TARGET_ARCH:-x86_64}" \
     -format UDRW -ov -fs HFS+ "$tmp_dmg"
 
 hdiutil convert "$tmp_dmg" -format UDZO -o "$destination_dmg"

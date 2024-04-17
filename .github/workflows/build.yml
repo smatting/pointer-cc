@@ -52,8 +52,7 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        # target_arch: [ x86_64, arm64 ]
-        target_arch: [ arm64 ]
+        target_arch: [ x86_64, arm64 ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,7 +90,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          architecture: 'arm64'
+          architecture: ${{ matrix.target_arch }}
           python-version: '3.10.11'
 
       - shell: bash
@@ -119,5 +118,5 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-result-darwin
+          name: build-result-darwin-${{ matrix.target_arch }}
           path: dist/*.dmg
