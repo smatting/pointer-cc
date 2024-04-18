@@ -118,10 +118,10 @@ class Control:
     def parse(d, i, default, context):
         try:
             x_s = expect_value(d, "x")
-            x = expect_decimal(x_s, "x")
+            x = expect_int(x_s, "x")
 
             y_s = expect_value(d, "y")
-            y = expect_decimal(y_s, "y")
+            y = expect_int(y_s, "y")
 
             default_type = control_type_bij.enum(default['type'])
             type_= maybe(d.get('type'), control_type_bij.enum, default_type)
@@ -137,8 +137,8 @@ class Control:
                 default_speed = d['speed']
                 default_time_resolution = 100
 
-            time_resolution = maybe(d.get('time_resolution'), lambda s: expect_decimal(s, 'time_resolution'), default_time_resolution)
-            speed = maybe(d.get('speed'), lambda s: expect_decimal(s, 'speed'), default_speed)
+            time_resolution = maybe(d.get('time_resolution'), lambda s: expect_int(s, 'time_resolution'), default_time_resolution)
+            speed = maybe(d.get('speed'), lambda s: expect_float(s, 'speed'), default_speed)
 
             return Control(type_, i, x, y, speed, m, time_resolution)
 
@@ -168,9 +168,9 @@ class Instrument:
 
             dimensions = expect_value(d, 'dimensions')
             width_s = expect_value(dimensions, 'width', 'dimensions')
-            width = expect_decimal(width_s, 'dimensions.width')
+            width = expect_int(width_s, 'dimensions.width')
             height_s = expect_value(dimensions, 'height', 'dimensions')
-            height = expect_decimal(height_s, 'dimensions.height')
+            height = expect_int(height_s, 'dimensions.height')
 
             box = Box(0, width, 0, height)
 
@@ -1202,7 +1202,7 @@ class Binding:
             command_name = expect_value(d, 'command')
             cmd = cmd_str.command(command_name)
             cc_s = expect_value(d, 'cc')
-            cc = expect_decimal(cc_s, 'cc')
+            cc = expect_int(cc_s, 'cc')
             return Binding(cmd, cc)
         except ConfigError as ce:
             ce.msg = ce.msg + f", {context}"
@@ -1224,7 +1224,7 @@ def expect_float(v, context=''):
     except:
         raise ConfigError(f'Not a float: \"{str(v)}\" in \"{context}\"')
 
-def expect_decimal(s, context):
+def expect_int(s, context):
     try:
         return int(s)
     except:
