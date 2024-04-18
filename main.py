@@ -1383,6 +1383,7 @@ def main():
     app = wx.App(True)
     polling = None
     dispatcher = None
+    update_check = None
     try:
         initialize_config()
 
@@ -1407,9 +1408,9 @@ def main():
 
     app.MainLoop()
 
-    update_check.event.set()
-    update_check.join()
-
+    if update_check:
+        update_check.event.set()
+        update_check.join()
 
     if dispatcher:
         dispatcher.join()
