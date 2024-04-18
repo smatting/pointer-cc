@@ -1,8 +1,10 @@
 from PIL import Image
 import wx
 import wx.lib.delayedresult
+import requests
 import time
 import importlib.resources
+import datetime
 import http.client
 import urllib
 import semver
@@ -42,28 +44,6 @@ app_url = "https://github.com/smatting/pointer-cc/"
 url_latest = "https://raw.githubusercontent.com/smatting/pointer-cc/main/latest_release.txt"
 
 InternalCommand = Enum('InternalCommand', ['QUIT', 'CHANGE_MIDI_PORT',  'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW', 'RELOAD_ALL_CONFIGS'])
-
-def https_get(url):
-    try:
-        url_parts = urllib.parse.urlparse(url)
-        connection = http.client.HTTPSConnection(url_parts.netloc)
-        connection.request("GET", url_parts.path)
-        response = connection.getresponse()
-        data = response.read().decode("utf-8")
-        return data
-    except Exception as e:
-        return None
-
-def check_latest():
-    if version == '0.0.0':
-        return
-    latest_version = https_get(url_latest).strip()
-    if latest_version is not None:
-        try:
-            if semver.compare(version, latest_version) < 0:
-                return latest_version
-        except:
-            pass
 
 class Bijection:
     def __init__(self, a_name, b_name, atob_pairs):
@@ -1021,10 +1001,11 @@ class MainWindow(wx.Frame):
         v = self.port_dropdown.GetValue()
         self.queue.put((InternalCommand.CHANGE_MIDI_PORT, v, True))
 
-    def handle_midi_channel_choice(self, event):
-        self.version_label.SetLabel("2.0.0 upgrade is available!")
+    def set_version_label(self, msg):
+        self.version_label.SetLabel(msg)
         self.sizer.Layout()
 
+    def handle_midi_channel_choice(self, event):
         i = event.GetInt()
         self.queue.put((InternalCommand.CHANGE_MIDI_CHANNEL, i))
 
@@ -1330,6 +1311,69 @@ def filepicker_set_button_label(picker, label):
         button.SetLabel(label)
         button.SetMinSize(button.GetBestSize())
 
+
+def https_get(url):
+    res = requests.get(url)
+
+    # try:
+    url_parts = urllib.parse.urlparse(url)
+    connection = http.client.HTTPSConnection(url_parts.netloc)
+    connection.request("GET", url_parts.path)
+    response = connection.getresponse()
+    data = response.read().decode("utf-8")
+    return data
+    # except Exception as e:
+    #     return None
+
+
+class UpdateCheck(threading.Thread):
+    def __init__(self, frame):
+        super(UpdateCheck, self).__init__()
+        self.frame = frame
+        self.event = threading.Event()
+
+    def run(self):
+        running = True
+        t_last = None
+        time.sleep(2)
+        while running:
+
+            do_check = False
+            t = datetime.datetime.now()
+            if t_last is None:
+                do_check = True
+            else:
+                if t - t_last > datetime.timedelta(hours=24):
+                    do_check = True
+            t_last = t
+
+            if do_check:
+                newer_version = self.check_latest_bigger_version()
+                if newer_version is not None:
+                    msg = f'Newer version {newer_version} is available!'
+                    wx.CallAfter(self.frame.set_version_label, msg)
+
+            if self.event.is_set():
+                running = False
+
+            time.sleep(0.5)
+
+    def check_latest_bigger_version(self):
+        latest_version = None
+        try:
+            r = requests.get(url_latest)
+            assert r.status_code == 200
+            latest_version = r.text.strip()
+        except Exception:
+            pass
+
+        if latest_version is not None:
+           try:
+               if semver.compare(version, latest_version) < 0:
+                   return latest_version
+           except:
+               pass
+
 def main():
     app = wx.App(True)
     polling = None
@@ -1349,11 +1393,18 @@ def main():
         dispatcher = Dispatcher(midiin, q, frame)
         dispatcher.start()
 
+        update_check = UpdateCheck(frame)
+        update_check.start()
+
 
     except Exception as e:
         traceback.print_exc()
 
     app.MainLoop()
+
+    update_check.event.set()
+    update_check.join()
+
 
     if dispatcher:
         dispatcher.join()
