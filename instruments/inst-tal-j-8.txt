@@ -3,10 +3,15 @@
 [window]
 contains = "TAL-J-8"
 
-[default_control]
-type = "wheel"
-wheel_speed = 1.0
-drag_speed = 1.0
+[default]
+type = "drag"
+
+[default.drag]
+speed = 1.0
+
+[default.wheel]
+speed = 1.0
+time_resolution = 100
 
 [dimensions]
 width = 1439

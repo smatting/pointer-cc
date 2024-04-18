@@ -3,10 +3,15 @@
 [window]
 contains = "Prophet-5 V"
 
-[default_control]
+[default]
 type = "drag"
-wheel_speed = 1.0
-drag_speed = 1.0
+
+[default.drag]
+speed = 1.0
+
+[default.wheel]
+speed = 1.0
+time_resolution = 100
 
 [dimensions]
 width = 1437
