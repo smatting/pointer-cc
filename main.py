@@ -379,12 +379,13 @@ class Dispatcher(threading.Thread):
 
             def sort_key(controller):
                 box = controller.window.box
-                key_contains = 0 if box.contains(x, y) else 1
+                key_contains = 0 if box.contains_point(x, y) else 1
                 key_distance = squared_dist(box.center(), (x, y))
                 tpl = (key_contains, key_distance)
                 return tpl
 
             controllers = list(self.controllers.values())
+            controllers.sort(key=sort_key)
             if len(controllers) > 0:
                 return controllers[0]
 
@@ -1056,15 +1057,23 @@ class WindowPolling(threading.Thread):
                 if self.windows.get(name) != windows[name]:
                     self.queue.put((InternalCommand.UPDATE_WINDOW, name, windows[name]))
                     self.windows[name] = windows[name]
+                    print(name, windows[name], len(self.windows))
 
             todelete = []
+            do_print = False
             for name in self.windows:
                 if windows.get(name) is None:
+                    # print('Deleting', name)
                     self.queue.put((InternalCommand.UPDATE_WINDOW, name, None))
                     todelete.append(name)
+                    do_print = True
+
 
             for name in todelete:
                 del self.windows[name]
+
+            if do_print:
+                print(name, windows[name], len(self.windows))
 
             time.sleep(1)
             if self.event.is_set():
@@ -1380,7 +1389,7 @@ class UpdateCheck(threading.Thread):
                pass
 
 def main():
-    app = wx.App(True)
+    app = wx.App(False)
     polling = None
     dispatcher = None
     update_check = None
@@ -1414,6 +1423,11 @@ def main():
 
     if dispatcher:
         dispatcher.join()
+
+def main2():
+    q = queue.Queue()
+    polling = WindowPolling(q, [ "TAL-J-8", "Prophet-5 V"])
+    polling.start()
 
 if __name__ == '__main__':
     main()
