@@ -1,3 +1,11 @@
+
+## Installation
+
+## Using pointer-cc
+
+![permissions needed for pointer-cc](docs/mac-permissions.gif)
+
+
 You add instruments before you are able to use pointer-cc.
 
 1. Take a screenshot of your instrument. Make sure you crop to the exact contents of the window, omit the window bar or borders.
