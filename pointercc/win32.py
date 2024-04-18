@@ -5,6 +5,10 @@ def get_windows(name_patterns):
     result = {}
     def f(hwnd, r):
         title = win32gui.GetWindowText(hwnd)
+
+        if not win32gui.IsWindowVisible(hwnd):
+            return
+
         if title is None:
             return
 

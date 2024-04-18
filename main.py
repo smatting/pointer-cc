@@ -1057,23 +1057,16 @@ class WindowPolling(threading.Thread):
                 if self.windows.get(name) != windows[name]:
                     self.queue.put((InternalCommand.UPDATE_WINDOW, name, windows[name]))
                     self.windows[name] = windows[name]
-                    print(name, windows[name], len(self.windows))
 
             todelete = []
-            do_print = False
             for name in self.windows:
                 if windows.get(name) is None:
-                    # print('Deleting', name)
                     self.queue.put((InternalCommand.UPDATE_WINDOW, name, None))
                     todelete.append(name)
-                    do_print = True
 
 
             for name in todelete:
                 del self.windows[name]
-
-            if do_print:
-                print(name, windows[name], len(self.windows))
 
             time.sleep(1)
             if self.event.is_set():
