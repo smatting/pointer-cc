@@ -2,6 +2,7 @@ from PIL import Image
 import wx
 import wx.lib.delayedresult
 import time
+import importlib.resources
 import http.client
 import urllib
 import semver
@@ -905,10 +906,12 @@ class MainWindow(wx.Frame):
 
         self.ports = ports
 
-        png = wx.Image('resources/logo-small.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-        logo = wx.StaticBitmap(self.panel, -1, png, (10, 10), (png.GetWidth(), png.GetHeight()))
+        files = importlib.resources.files('pointercc')
+        with files.joinpath('resources/logo-small.png').open('rb') as f:
+            png = wx.Image(f, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+            logo = wx.StaticBitmap(self.panel, -1, png, (10, 10), (png.GetWidth(), png.GetHeight()))
 
-        self.version_label = wx.StaticText(self.panel, label=f'Version {version}', style=wx.ALIGN_CENTRE_HORIZONTAL)
+        self.version_label = wx.StaticText(self.panel, label=f'', style=wx.ALIGN_CENTRE_HORIZONTAL)
 
         value = ""
         self.port_dropdown = wx.ComboBox(self.panel, id=wx.ID_ANY, value=value, choices=self.ports, style=wx.CB_READONLY)
@@ -1019,7 +1022,7 @@ class MainWindow(wx.Frame):
         self.queue.put((InternalCommand.CHANGE_MIDI_PORT, v, True))
 
     def handle_midi_channel_choice(self, event):
-        self.version_label.SetLabel("Version 0.0.0 (2.0.0 is available!)")
+        self.version_label.SetLabel("2.0.0 upgrade is available!")
         self.sizer.Layout()
 
         i = event.GetInt()

@@ -11,4 +11,5 @@ pyinstaller \
     --name pointer-cc \
     --target-arch "${TARGET_ARCH:-x86_64}" \
     --icon ./resources/icon.icns \
+    --add-data "./pointercc/resources/logo-small.png:./pointercc/resources/" \
     --windowed main.py
