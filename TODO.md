@@ -31,6 +31,7 @@ First release:
 - [x] github: remove that "deployments" (environments) thingy
 - [x] icon for windows
 - [x] fix bug: app doesn't close
-- [ ] new version available check
+- [x] new icon
+- [x] new version available check
 - [ ] write documentation
 - [ ] create video

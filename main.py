@@ -911,8 +911,8 @@ class MainWindow(wx.Frame):
 
         filemenu= wx.Menu()
 
-        # about = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
-        # self.Bind(wx.EVT_MENU, self.on_help, about)
+        about = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
+        self.Bind(wx.EVT_MENU, self.on_about, about)
 
         reload_config = filemenu.Append(wx.ID_ANY, "&Reload config"," Reload all configuration")
         self.Bind(wx.EVT_MENU, self.reload_config, reload_config)
@@ -971,6 +971,11 @@ class MainWindow(wx.Frame):
 
     def on_help(self, event):
         webbrowser.open(app_url)
+
+    def on_about(self, event):
+        msg = f'poiter-cc, Version {version}\nby Stefan Matting\n{app_url}'
+        dlg = wx.MessageDialog(None, msg, 'About', wx.OK | wx.ICON_INFORMATION)
+        dlg.ShowModal()
 
     def reload_config(self, event):
         self.queue.put((InternalCommand.RELOAD_ALL_CONFIGS, None))
