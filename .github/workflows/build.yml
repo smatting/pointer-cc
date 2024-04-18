@@ -1,10 +1,10 @@
 name: build
 
-on:
-  push:
-    branches: [ main ]
 # on:
-#   workflow_dispatch:
+#   push:
+#     branches: [ main ]
+on:
+  workflow_dispatch:
 
 jobs:
   build-win32:
