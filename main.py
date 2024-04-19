@@ -801,7 +801,7 @@ class AddInstrumentDialog(wx.Dialog):
         sizer.Add(mouseControlDescr, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
         choices = [
-            "mouse drag up and down (prefer this if both are supported)",
+            "mouse drag up and down",
             "mouse wheel"
         ]
         self.mousectrl_combo = wx.ComboBox(self, id=wx.ID_ANY, choices=choices, style=wx.CB_READONLY)
@@ -871,7 +871,7 @@ class AddInstrumentDialog(wx.Dialog):
         height = dim['height']
         n = len(extract_result['controls'])
         filename = os.path.basename(path)
-        msg = f'{width}x{height}, {n} controls ({filename}).'
+        msg = f'{n} controls found in {filename}, {width}x{height}.'
         self.analyzeText.SetLabel(msg)
 
     def on_save_file_picked(self, event):
