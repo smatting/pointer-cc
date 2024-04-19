@@ -30,7 +30,7 @@ After adding the instruments choose `Open Config Dir`. The configuration directo
 
 - `inst-{some name}.txt`- Instrument configuration files. These have to start with `inst-` and and with `.txt`. Files named differently will be ignored.
 
-The `config.txt` by default looks like this
+The **main confguration** file `config.txt` looks like this
 
 ```
 [bindings]
@@ -68,6 +68,67 @@ The `command` field determines what happens when you adust the midi controller.
 
 - `pan-y-inv` pan the cursor vertically. A CC value `127` pans the pointer all the way up
 
-- `adjust-control` adjust the control. What mouse pointer action is simulated depends on the instrument configuration of the current instrument (see below)
+- `adjust-control` adjust the control. What mouse pointer action is simulated depends on the current control element being hovered. See instrument configuration below. This command makes the associated kno the "adjustment knob".
 
 The `[midi]` section is automatically updated when you change the MIDI settings in the window, there is no need to edit this part manually.
+
+A typical **instrument configuration* file, e.g. `inst-jupiter8.txt` looks like this
+
+```
+[window]
+contains = "TAL-J-8"
+
+[default]
+type = "wheel"
+
+[default.drag]
+speed = 1.0
+
+[default.wheel]
+speed = 0.3
+time_resolution = 50
+
+[dimensions]
+width = 1439
+height = 736
+
+[controls]
+[controls.c1]
+x = 1074
+y = 172
+m = 1.0
+
+[controls.c2]
+type = "click"
+x = 1033
+y = 177
+m = 1.0
+
+...
+```
+
+- `window.contains` is used by pointer-cc to find the instrument window. Pick a string here that is always contained in the window title of the instrument. It's usually the name of the instrument. Note that the case has to also match (comparison is case-sensitive).
+
+- `default.type` the default type of pointer control used by all controls if not explicity `type` is defined. Valid values are `drag`, `wheel`, `click` (see below)
+
+- `default.drag.speed` default setting for`speed` for controls that are of type `drag`
+
+- `default.wheel.speed` default setting for`speed` for controls that are of type `wheel`
+
+- `default.wheel.time_resolution` default setting for `time_resolution` for controls that are of type `wheel`
+
+- `control.c*.x`: x coordinate of the control element (was extracted from screenshot)
+
+- `control.c*.y`: y coordinate of the control element (was extracted from screenshot)
+
+- `control.c*.type` (optional). Determines the type of mouse pointer action that is simulated by pointer-cc when the adjustment knob is turned. Valid values are
+  
+  - `drag` the mouse pointer is dragged up or down
+  
+  - `wheel` the mouse pointer's wheel is turned up or down
+  
+  - `click` the mouse pointer simulates a click. To trigger a click turn the adjustment knob quickly down and then up again
+
+- `control.c*.m` (optional) Speed multiplier for (only relevant for `wheel` and `drag`). Values smaller than `1.0` result in less dragging or wheeling while values greater than `1.0` result in more dragging and wheeling. Use this to tune the speed of the control relative to the rest. The overall speed that the controller `speed * m`.
+
+- `dimensions.width` and `dimensions.height`. Defines the dimensions of the whole instruments. All `x` and `y` coordinates of control elements relative to it. This is the resolution of the screenshot image.
