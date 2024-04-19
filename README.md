@@ -82,7 +82,7 @@ The `command` field specifies the action performed when adjusting the MIDI contr
 
 - `adjust-control` adjust the current control. What mouse pointer action is simulated depends on the configuration of current control element (See instrument configuration below)
 
-- `freewheel` start freewheeling. While freewheeling you can turn the adjustment knob (knob mapped to `adjust-control`) in one direction without it having any effect. When you turn the adjustment knob in the other direction freewheeling stops and the adjustment knob has its effect again.
+- `freewheel` start freewheeling. While freewheeling you can turn the adjustment knob (knob mapped to `adjust-control`) in one direction without it having any effect. When you turn the adjustment knob in the other direction freewheeling stops and the adjustment knob has its effect again. Freewheeling is useful if you don't have an endless rotary knob on your midi controller.
 
 The `[midi]` section updates automatically based on your MIDI settings within the application.
 
