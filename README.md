@@ -1,38 +1,40 @@
 ## Installation
 
-You can find **downloads** for Mac and Windows in the [releases page](https://github.com/smatting/pointer-cc/releases). If you've got a newer Mac with a M chip, then download the `.dmg`  file that ends with`-arm64`. Otherwise download the `.dmg` file that ends with `-x86_x64` . You can find out which one you got in the `About My Mac` menu.
+You can download pointer-cc for both Mac and Windows from the [releases page](https://github.com/smatting/pointer-cc/releases). If you have a newer Mac with an M chip, download the `.dmg` file that ends with `-arm64`. Otherwise, download the `.dmg` file that ends with `-x86_x64`. You can verify your Mac type under `About This Mac` in the Apple menu.
 
-When yourun the Window installer there will be a warning that the installer comes from "Unknown Publisher". This is because I don't want to spend the 300 eur per year for obtaining a verified certificate. You can optionally add the [StefanMattingCA.cer](https://raw.githubusercontent.com/smatting/pointer-cc/main/certs/StefanMattingCA.cer) certificate to the trusted root certificates of your user to ger rid of the warning.
+
+When running the Windows installer, you may encounter a warning about the installer coming from an "Unknown Publisher." This is because I (the author) have not bought a verified certificate, which requires an annual fee of 300 EUR. Optionally, you can add the [StefanMattingCA.cer](https://raw.githubusercontent.com/smatting/pointer-cc/main/certs/StefanMattingCA.cer) certificate to your trusted root certificates to remove this warning.
 
 ## Using pointer-cc
 
-When you run pointer-cc the first time on Mac it will ask permissions to for both "Screen Recording" and "Accessability". pointer-cc needs these permissions in order to be able to move the both ("Accessability" permission) as well as recognizing the instruments location and size ("Screen recording"). Please navigate to "Security & Privacy" and make sure you've manually added a checkmark for categories. Please restart the app! It can be that pointer-cc doesn't ask for all permission the first time. In that case you need to restart pointer-cc **twice**.
+Upon first launch on a Mac, pointer-cc will request permissions for both "Screen Recording" and "Accessibility" to function properly. Navigate to "Security & Privacy" in your system settings and ensure permissions are enabled. Please restart the app afterward; sometimes, pointer-cc may not request all necessary permissions on the first attempt, requiring a second restart.
 
-![permissions needed for pointer-cc](docs/mac-permissions.gif) 
+![Mac permissions needed for pointer-cc](docs/mac-permissions.gif) 
 
 <img title="" src="docs/main-window-unconfigured-win32.png" alt="" width="293">
 
-At the bottom of the main window you can select yor MIDI device and channel. You should see MIDI messages flashing at the bottom if it works correctly.
+At the bottom of the main window, you can select your MIDI device and channel. If everything is set up correctly, MIDI messages should appear at the bottom as you interact.
 
+To begin using pointer-cc, you'll need to configure instrument settings. Follow these steps:
 
+1. Capture a screenshot of your instrument. Make sure you crop to the exact contents of the window, omit the window bar or borders.
+2. Use a paint program (e.g. online [jspaint.app](https://jspaint.app), MS Paint or [GIMP](https://www.gimp.org/)) to mark all controls with points or rectangles in a distinct color not found in the screenshot.Note the exact RGB color code (e.g., `#ff00ff` or `R = 255, G = 0, B = 255`). You can omit controls you're not interested in. Here's an example:
 
-In order to start using pointer-cc you need add instrument configurations. To add a new instrument follow these steps
+![controls marked with pink dots](docs/obxd-marked.jpg)
 
-1. Take a screenshot of your instrument. Make sure you crop to the exact contents of the window, omit the window bar or borders.
-2. Use a paint program (e.g. online [jspaint.app](https://jspaint.app), MS Paint or [GIMP](https://www.gimp.org/)) to mark all the controls with points or rectangles in the same color. Choose a color for that doesn't occur in the screenshot otherwise. Make sure you note down the exact RGB color code, e.g. `#ff00ff0` or `R = 255, G = 0, B = 255` if you chose a pink like in the screenshot. Feel free to omit any controls that you are not interested in. It could look like this:
-   ![controls marked with pink dots](docs/obxd-marked.jpg)
    Save the marked screenshot as a PNG file.
-3. In pointer-cc select `Add Instrument` from the menu and follow the instructions.
 
-After adding the instruments choose `Open Config Dir`. The configuration directory of pointer-cc contains two kinds of files
+3. In pointer-cc, select `Add Instrument` from the menu and follow the prompts.
 
-- `config.txt` - The main configuration file
+After adding the instruments choose `Open Config Dir`. The configuration directory of pointer-cc contains two types of files:
 
-- `inst-{some name}.txt`- Instrument configuration files. These have to start with `inst-` and and with `.txt`. Files named differently will be ignored.
+- `config.txt`: The main configuration file.
+
+- `inst-{some name}.txt`: Instrument configuration files (must start with `inst-` and end with `.txt`).
 
 The **main confguration** file `config.txt` looks like this
 
-```
+```toml
 [bindings]
 [bindings.1]
 command = "pan-x"
@@ -56,11 +58,11 @@ channel = 0
 
 ```
 
-In the `[bindings]` section you add mappings of your midi control knobs to commands for pointer-cc. To determin the correct value for the  `cc` field turn the knob you want to use and note down the control number atthe MIDI status barat the bottom of the pointer-cc window and change `cc` field to it.
+In the `[bindings]` section, you map MIDI control knobs to pointer-cc commands. To determine the correct `cc` field value, note the control number displayed in the MIDI status bar at the bottom of the pointer-cc window.
 
-The `command` field determines what happens when you adust the midi controller.
+The `command` field specifies the action performed when adjusting the MIDI controller.
 
-- `pan-x` pan the cursor horizontally. A CC value `0` pans the pointer all the way left
+- `pan-x`: pan the cursor horizontally. A CC value `0` pans the pointer all the way left
 
 - `pan-x-inv` pan the cursor horizonally. A CC value of `127` pans the pointer  all the way left
 
@@ -72,9 +74,9 @@ The `command` field determines what happens when you adust the midi controller.
 
 - `freewheel` start freewheeling. While freewheeling you can turn the adjustment knob (knob mapped to `adjust-control`) in one direction without it having any effect. When you turn the adjustment knob in the other direction freewheeling stops and the adjustment knob has its effect again.
 
-The `[midi]` section is automatically updated when you change the MIDI settings in the window, there is no need to edit this part manually.
+The `[midi]` section updates automatically based on your MIDI settings within the application.
 
-The instrument file that is generated in the "Add Instrument" window. To tune it to your needs you need to edit it with a text editor. A typical **instrument configuration** file, e.g. `inst-jupiter8.txt` looks like this
+The instrument file that is generated in the "Add Instrument" window is meant to be edit manually after creating it. A typical **instrument configuration** file, e.g. `inst-jupiter8.txt` looks like this
 
 ```
 [window]
@@ -109,10 +111,6 @@ m = 1.0
 ...
 
 ```
-
-
-
-
 
 - `window.contains` is used by pointer-cc to find the instrument window. Pick a string here that is contained in the window title of the instrument. It's usually the name of the instrument. Note that the case has to also match (comparison is case-sensitive).
 
