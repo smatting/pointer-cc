@@ -32,6 +32,8 @@ After adding the instruments choose `Open Config Dir`. The configuration directo
 
 - `inst-{some name}.txt`: Instrument configuration files (must start with `inst-` and end with `.txt`).
 
+The config files use the [TOML](https://toml.io/en/) format.
+
 The **main confguration** file `config.txt` looks like this
 
 ```toml
@@ -78,7 +80,7 @@ The `[midi]` section updates automatically based on your MIDI settings within th
 
 The instrument file that is generated in the "Add Instrument" window is meant to be edit manually after creating it. A typical **instrument configuration** file, e.g. `inst-jupiter8.txt` looks like this
 
-```
+```toml
 [window]
 contains = "TAL-J-8"
 
