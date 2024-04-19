@@ -72,7 +72,7 @@ The `command` field determines what happens when you adust the midi controller.
 
 The `[midi]` section is automatically updated when you change the MIDI settings in the window, there is no need to edit this part manually.
 
-A typical **instrument configuration* file, e.g. `inst-jupiter8.txt` looks like this
+A typical **instrument configuration** file, e.g. `inst-jupiter8.txt` looks like this
 
 ```
 [window]
@@ -115,7 +115,7 @@ m = 1.0
 
 - `default.wheel.speed` default setting for`speed` for controls that are of type `wheel`
 
-- `default.wheel.time_resolution` default setting for `time_resolution` for controls that are of type `wheel`
+- `default.wheel.time_resolution` default setting for `time_resolution` for controls that are of type `wheel`. This settings controls how many times per second a wheel event is send to the instrument window. If this is too high then the operating system (seen on Windows only) might drop wheel events when you turn the adjustment knob fast. Setting it too low results in too choppy updates. Try to experiment with this value to find a sweet spot. `50` (times per second) seems to be good starting point.
 
 - `control.c*.x`: x coordinate of the control element (was extracted from screenshot)
 
