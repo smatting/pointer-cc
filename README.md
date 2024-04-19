@@ -86,7 +86,7 @@ The `command` field specifies the action performed when adjusting the MIDI contr
 
 The `[midi]` section updates automatically based on your MIDI settings within the application.
 
-The instrument file that is generated in the "Add Instrument" window is meant to be edit manually after creating it. A typical **instrument configuration** file, e.g. `inst-jupiter8.txt` looks like this
+The instrument file that is generated in the "Add Instrument" window is meant to be edited manually after creating it. A typical **instrument configuration** file, e.g. `inst-jupiter8.txt` looks like this
 
 ```toml
 [window]
@@ -149,5 +149,5 @@ If no `type` is specified for a control element (`c1`), the default type specifi
 
 - `dimensions.width` and `dimensions.height`. Defines the dimensions of the whole instruments. All `x` and `y` coordinates of control elements relative to it. This is the resolution of the screenshot image.
 
-### Acknowledgements
+##### Acknowledgements
 The original idea for this project came from a video by [@WoodyPianoShack](https://www.youtube.com/@WoodyPianoShack) titled [I Fixed The Major Problem With All Software Synths](https://www.youtube.com/watch?v=BPoutltNV_E).
