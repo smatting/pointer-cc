@@ -135,7 +135,9 @@ m = 1.0
   
   - `click`: Simulates a mouse click. To trigger a click, quickly turn the adjustment knob down and then up again.
 
-If no `type` is specified for a control element (`c1`), the default type specified by `default.type` will be used.- `control.c1.m` (optional): This parameter acts as a speed multiplier specifically applicable to `wheel` and `drag` control types. When set to values smaller than `1.0`, it reduces the sensitivity of dragging or wheeling actions, resulting in slower movements. Conversely, values greater than `1.0` increase sensitivity, causing faster dragging or wheeling. Adjust this parameter to fine-tune the responsiveness of the control relative to others. The resulting speed of the controller is calculated as `speed * m`. If `m` is not specified, a default value of `1.0` is used.
+  If no `type` is specified for a control element (`c1`), the default type specified by `default.type` will be used.
+
+- `control.c1.m` (optional): This parameter acts as a speed multiplier specifically applicable to `wheel` and `drag` control types. When set to values smaller than `1.0`, it reduces the sensitivity of dragging or wheeling actions, resulting in slower movements. Conversely, values greater than `1.0` increase sensitivity, causing faster dragging or wheeling. Adjust this parameter to fine-tune the responsiveness of the control relative to others. The resulting speed of the controller is calculated as `speed * m`. If `m` is not specified, a default value of `1.0` is used.
 
 - `control.c1.speed` (optional): This parameter defines the speed specifically for the control element. It is recommended not to set this parameter unless you have a specific reason to do so. Instead, it is preferable to establish consistent base speeds for all knobs by setting `default.drag.speed` and `default.wheel.speed`. Use `control.c1.m` to adjust the relative speed of individual controls based on this standardized base speed. This approach ensures uniform behavior across controls and simplifies configuration management.
 
