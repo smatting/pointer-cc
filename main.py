@@ -299,7 +299,7 @@ def toml_instrument_config(extract_result, window_contains, control_type):
 
     default_wheel = tomlkit.table()
     default_wheel.add('speed', 1.0)
-    default_drag.add('time_resolution', 100)
+    default_wheel.add('time_resolution', 100)
     default_control.add('wheel', default_wheel)
 
     doc.add('default', default_control)
