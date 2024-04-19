@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="460" src="./resources/logo-big.png">
+</p>
+
 ## Installation
 
 You can download pointer-cc for both Mac and Windows from the [releases page](https://github.com/smatting/pointer-cc/releases). If you have a newer Mac with an M chip, download the `.dmg` file that ends with `-arm64`. Otherwise, download the `.dmg` file that ends with `-x86_x64`. You can verify your Mac type under `About This Mac` in the Apple menu.
