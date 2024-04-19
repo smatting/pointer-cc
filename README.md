@@ -18,7 +18,7 @@ At the bottom of the main window, you can select your MIDI device and channel. I
 To begin using pointer-cc, you'll need to configure instrument settings. Follow these steps:
 
 1. Capture a screenshot of your instrument. Make sure you crop to the exact contents of the window, omit the window bar or borders.
-2. Use a paint program (e.g. online [jspaint.app](https://jspaint.app), MS Paint or [GIMP](https://www.gimp.org/)) to mark all controls with points or rectangles in a distinct color not found in the screenshot.Note the exact RGB color code (e.g., `#ff00ff` or `R = 255, G = 0, B = 255`). You can omit controls you're not interested in. Here's an example:
+2. Use a paint program (e.g. online [jspaint.app](https://jspaint.app), MS Paint or [GIMP](https://www.gimp.org/)) to mark all controls with points or rectangles in a distinct color not found in the screenshot. Note the exact RGB color code (e.g., `#ff00ff` or `R = 255, G = 0, B = 255`). You can omit controls you're not interested in. Here's an example:
 
 ![controls marked with pink dots](docs/obxd-marked.jpg)
 
@@ -114,33 +114,30 @@ m = 1.0
 
 - `window.contains` is used by pointer-cc to find the instrument window. Pick a string here that is contained in the window title of the instrument. It's usually the name of the instrument. Note that the case has to also match (comparison is case-sensitive).
 
-- `default.type` the default type of pointer control used by all controls if not explicity `type` is defined. Valid values are `drag`, `wheel`, `click` (see below)
-
-- `default.drag.speed` default setting for`speed` for controls that are of type `drag`
-
-- `default.wheel.speed` default setting for`speed` for controls that are of type `wheel`
-
-- `default.wheel.time_resolution` default setting for `time_resolution` for controls that are of type `wheel`. This settings controls how many times per second a wheel event is send to the instrument window. If this is too high then the operating system (seen on Windows only) might drop wheel events when you turn the adjustment knob fast. Setting it too low results in too choppy updates. Try to experiment with this value to find a sweet spot. `50` (times per second) seems to be good starting point.
-
 - `controls` The `controls.c1`, `controls.c2`, ... sections correspond to the control elements that you marked in the screenshots. You can see the `c?` number that belongs to acontrol element in the pointer-cc window when you select .
 
 - `controls.c1.x`: x coordinate of the control element (was extracted from screenshot)
 
 - `controls.c1.y`: y coordinate of the control element (was extracted from screenshot)
 
-- `controls.c1.type` (optional). Determines the type of mouse pointer action that is simulated by pointer-cc when the adjustment knob is turned while on control `c1`. Valid values are
-  
-  - `drag` the mouse pointer is dragged up or down
-  
-  - `wheel` the mouse pointer's wheel is turned up or down
-  
-  - `click` the mouse pointer simulates a click. To trigger a click turn the adjustment knob quickly down and then up again
-  
-  If you don't specify a `type` for a control element then `default.type` is used.
+- `controls.c1.type` (optional): Specifies the type of mouse pointer action simulated by pointer-cc when adjusting the knob associated with control `c1`. Available values include:
 
-- `control.c1.m` (optional) Speed multiplier for (only relevant for `wheel` and `drag`). Values smaller than `1.0` result in less dragging or wheeling while values greater than `1.0` result in more dragging and wheeling. Use this to tune the speed of the control relative to the rest. The overall speed that the controller `speed * m`.
-  If you don't specify a `m` then `1.0` is used.
+  - `drag`: Simulates dragging the mouse pointer up or down.
+  
+  - `wheel`: Simulates scrolling the mouse wheel up or down.
+  
+  - `click`: Simulates a mouse click. To trigger a click, quickly turn the adjustment knob down and then up again.
 
-- `control.c1.speed` (optional) Speed for the control element. Unless you have a good reason don't set it. It's better to set `default.drag.speed` abd `defautlt.wheel.speed` to have consistent base speeds for all knobs and use `control.c1.m` to modify relative to the base speed
+If no `type` is specified for a control element (`c1`), the default type specified by `default.type` will be used.- `control.c1.m` (optional): This parameter acts as a speed multiplier specifically applicable to `wheel` and `drag` control types. When set to values smaller than `1.0`, it reduces the sensitivity of dragging or wheeling actions, resulting in slower movements. Conversely, values greater than `1.0` increase sensitivity, causing faster dragging or wheeling. Adjust this parameter to fine-tune the responsiveness of the control relative to others. The resulting speed of the controller is calculated as `speed * m`. If `m` is not specified, a default value of `1.0` is used.
+
+- `control.c1.speed` (optional): This parameter defines the speed specifically for the control element. It is recommended not to set this parameter unless you have a specific reason to do so. Instead, it is preferable to establish consistent base speeds for all knobs by setting `default.drag.speed` and `default.wheel.speed`. Use `control.c1.m` to adjust the relative speed of individual controls based on this standardized base speed. This approach ensures uniform behavior across controls and simplifies configuration management.
+
+- `default.type` the default type of pointer control used by all controls if not explicitely `type` is defined. Valid values are `drag`, `wheel`, `click` (see below)
+
+- `default.drag.speed` default setting for`speed` for controls that are of type `drag`
+
+- `default.wheel.speed` default setting for`speed` for controls that are of type `wheel`
+
+- `default.wheel.time_resolution`: This setting determines the maximum frequency (in times per second) at which wheel events are sent to the instrument window. If set too high, particularly on Windows systems, rapid adjustment knob turns may cause the operating system to drop wheel events. Conversely, setting it too low can result in overly choppy updates. I recommend experimenting with this value to find an optimal balance. A starting point of `50` times per second often works well to achieve smooth and responsive control.
 
 - `dimensions.width` and `dimensions.height`. Defines the dimensions of the whole instruments. All `x` and `y` coordinates of control elements relative to it. This is the resolution of the screenshot image.
