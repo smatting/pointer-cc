@@ -149,5 +149,5 @@ If no `type` is specified for a control element (`c1`), the default type specifi
 
 - `dimensions.width` and `dimensions.height`. Defines the dimensions of the whole instruments. All `x` and `y` coordinates of control elements relative to it. This is the resolution of the screenshot image.
 
-# Acknowledgements
-The original idea for this project came from a video by the Woody Piano Shack YouTube channel titled [I Fixed The Major Problem With All Software Synths](https://www.youtube.com/watch?v=BPoutltNV_E).
+### Acknowledgements
+The original idea for this project came from a video by [@WoodyPianoShack](https://www.youtube.com/@WoodyPianoShack) titled [I Fixed The Major Problem With All Software Synths](https://www.youtube.com/watch?v=BPoutltNV_E).
