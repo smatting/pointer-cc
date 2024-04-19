@@ -109,9 +109,6 @@ type = "click"
 x = 1033
 y = 177
 m = 1.0
-
-...
-
 ```
 
 - `window.contains` is used by pointer-cc to find the instrument window. Pick a string here that is contained in the window title of the instrument. It's usually the name of the instrument. Note that the case has to also match (comparison is case-sensitive).
