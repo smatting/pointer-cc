@@ -12,14 +12,14 @@ When you run pointer-cc the first time on Mac it will ask permissions to for bot
 
 <img title="" src="docs/main-window-unconfigured-win32.png" alt="" width="293">
 
-At the bottom of the main window you can select yor MIDI device and channel. You should see MIDI message flashing at the bottom if it works correctly.
+At the bottom of the main window you can select yor MIDI device and channel. You should see MIDI messages flashing at the bottom if it works correctly.
 
 
 
 In order to start using pointer-cc you need add instrument configurations. To add a new instrument follow these steps
 
 1. Take a screenshot of your instrument. Make sure you crop to the exact contents of the window, omit the window bar or borders.
-2. Use a paint program (e.g. Paint or [GIMP](https://www.gimp.org/)) to mark all the controls with dots. Choose a color for the dots that doesn't occur in the screenshot otherwise. Make sure you note down the exact RGB color code, e.g. `#ff00ff0` or `R = 255, G = 0, B = 255` if you chose a pink like in the screenshot. Feel free to omit any controls that you are not interested in. For example it could look like this:
+2. Use a paint program (e.g. online [jspaint.app](https://jspaint.app), MS Paint or [GIMP](https://www.gimp.org/)) to mark all the controls with points or rectangles in the same color. Choose a color for that doesn't occur in the screenshot otherwise. Make sure you note down the exact RGB color code, e.g. `#ff00ff0` or `R = 255, G = 0, B = 255` if you chose a pink like in the screenshot. Feel free to omit any controls that you are not interested in. It could look like this:
    ![controls marked with pink dots](docs/obxd-marked.jpg)
    Save the marked screenshot as a PNG file.
 3. In pointer-cc select `Add Instrument` from the menu and follow the instructions.
@@ -74,7 +74,7 @@ The `command` field determines what happens when you adust the midi controller.
 
 The `[midi]` section is automatically updated when you change the MIDI settings in the window, there is no need to edit this part manually.
 
-A typical **instrument configuration** file, e.g. `inst-jupiter8.txt` looks like this
+The instrument file that is generated in the "Add Instrument" window. To tune it to your needs you need to edit it with a text editor. A typical **instrument configuration** file, e.g. `inst-jupiter8.txt` looks like this
 
 ```
 [window]
@@ -107,9 +107,14 @@ y = 177
 m = 1.0
 
 ...
+
 ```
 
-- `window.contains` is used by pointer-cc to find the instrument window. Pick a string here that is always contained in the window title of the instrument. It's usually the name of the instrument. Note that the case has to also match (comparison is case-sensitive).
+
+
+
+
+- `window.contains` is used by pointer-cc to find the instrument window. Pick a string here that is contained in the window title of the instrument. It's usually the name of the instrument. Note that the case has to also match (comparison is case-sensitive).
 
 - `default.type` the default type of pointer control used by all controls if not explicity `type` is defined. Valid values are `drag`, `wheel`, `click` (see below)
 
@@ -119,18 +124,25 @@ m = 1.0
 
 - `default.wheel.time_resolution` default setting for `time_resolution` for controls that are of type `wheel`. This settings controls how many times per second a wheel event is send to the instrument window. If this is too high then the operating system (seen on Windows only) might drop wheel events when you turn the adjustment knob fast. Setting it too low results in too choppy updates. Try to experiment with this value to find a sweet spot. `50` (times per second) seems to be good starting point.
 
-- `control.c*.x`: x coordinate of the control element (was extracted from screenshot)
+- `controls` The `controls.c1`, `controls.c2`, ... sections correspond to the control elements that you marked in the screenshots. You can see the `c?` number that belongs to acontrol element in the pointer-cc window when you select .
 
-- `control.c*.y`: y coordinate of the control element (was extracted from screenshot)
+- `controls.c1.x`: x coordinate of the control element (was extracted from screenshot)
 
-- `control.c*.type` (optional). Determines the type of mouse pointer action that is simulated by pointer-cc when the adjustment knob is turned. Valid values are
+- `controls.c1.y`: y coordinate of the control element (was extracted from screenshot)
+
+- `controls.c1.type` (optional). Determines the type of mouse pointer action that is simulated by pointer-cc when the adjustment knob is turned while on control `c1`. Valid values are
   
   - `drag` the mouse pointer is dragged up or down
   
   - `wheel` the mouse pointer's wheel is turned up or down
   
   - `click` the mouse pointer simulates a click. To trigger a click turn the adjustment knob quickly down and then up again
+  
+  If you don't specify a `type` for a control element then `default.type` is used.
 
-- `control.c*.m` (optional) Speed multiplier for (only relevant for `wheel` and `drag`). Values smaller than `1.0` result in less dragging or wheeling while values greater than `1.0` result in more dragging and wheeling. Use this to tune the speed of the control relative to the rest. The overall speed that the controller `speed * m`.
+- `control.c1.m` (optional) Speed multiplier for (only relevant for `wheel` and `drag`). Values smaller than `1.0` result in less dragging or wheeling while values greater than `1.0` result in more dragging and wheeling. Use this to tune the speed of the control relative to the rest. The overall speed that the controller `speed * m`.
+  If you don't specify a `m` then `1.0` is used.
+
+- `control.c1.speed` (optional) Speed for the control element. Unless you have a good reason don't set it. It's better to set `default.drag.speed` abd `defautlt.wheel.speed` to have consistent base speeds for all knobs and use `control.c1.m` to modify relative to the base speed
 
 - `dimensions.width` and `dimensions.height`. Defines the dimensions of the whole instruments. All `x` and `y` coordinates of control elements relative to it. This is the resolution of the screenshot image.
