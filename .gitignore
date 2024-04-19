@@ -6,7 +6,7 @@ build
 Output
 datadir
 download
-certs
+private_certs
 instruments/*.png
 instruments/*.xcf
 *.spec

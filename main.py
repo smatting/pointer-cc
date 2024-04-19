@@ -224,7 +224,10 @@ def find_overlapping(spans, p):
             return spans[p_span]
     return None
 
-def find_markings(im, marker_color, update_percent):
+def color_diff(c1, c2):
+    return max(abs(c1[0] - c2[0]), abs(c1[1] - c2[1]), abs(c1[2] - c2[2]))
+
+def find_markings(im, marker_color, threshold, update_percent):
     boxes = []
     spans_last = {}
     for y in range(0, im.height):
@@ -233,7 +236,9 @@ def find_markings(im, marker_color, update_percent):
         xmax = None
         spans = {}
         for x in range(0, im.width):
-            in_marker = im.getpixel((x, y)) == marker_color
+            color = im.getpixel((x, y))
+            diff = color_diff(marker_color, color)
+            in_marker = diff <= threshold
             if in_marker:
                 if xmin is None:
                     xmin = x
@@ -254,7 +259,7 @@ def find_markings(im, marker_color, update_percent):
         spans_last = spans
     return boxes
 
-def analyze(self, filename, marker_color=(255, 0, 255, 255)):
+def analyze(self, filename, marker_color, threshold):
     d = {}
     im = Image.open(filename)
 
@@ -268,7 +273,7 @@ def analyze(self, filename, marker_color=(255, 0, 255, 255)):
 
     controls = {}
     d['controls'] = controls
-    markings = find_markings(im, marker_color, update_percent)
+    markings = find_markings(im, marker_color, threshold, update_percent)
     for i, box in enumerate(markings):
         c = {}
         x, y = box.center()
@@ -751,9 +756,20 @@ class AddInstrumentDialog(wx.Dialog):
         sizer.AddSpacer(smallmargin)
         sizer.Add(cpSizer, 0, wx.LEFT | wx.RIGHT, border=horizontal_margin)
         sizer.AddSpacer(smallmargin)
+
+
+        self.colorThreshold = wx.TextCtrl(self, value="30")
+        colorThresholdSizer = wx.BoxSizer(wx.HORIZONTAL)
+        colorThresholdSizer.Add(self.colorThreshold)
+
+        thresholdLabel = wx.StaticText(self, label="Marker color threshold (0-255)")
+        colorThresholdSizer.Add(thresholdLabel, 0, wx.LEFT, border=smallmargin)
+        sizer.Add(colorThresholdSizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
+
         self.selectScreenshot = wx.FilePickerCtrl(self, style=wx.FLP_OPEN, message="Select a cropped screenshot of instrument", wildcard="*.png")
         self.selectScreenshot.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_screenshot_selected)
         filepicker_set_button_label(self.selectScreenshot, 'Analyze Screenshot')
+
 
         self.analyzeText = wx.StaticText(self, label="(no positions extracted yet)")
         analyzeSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -831,10 +847,22 @@ class AddInstrumentDialog(wx.Dialog):
             self.progress.Update(i)
 
     def on_screenshot_selected(self, event):
+        v = self.colorThreshold.GetValue()
+        msg = None
+        try:
+            v_int = int(v)
+        except Exception as e:
+            msg = f'Color threshold {v} is not an integer'
+        if not (0 <= v_int and v_int <= 255):
+            msg = f'Color threshold {v} is not in range 0-255'
+        if msg:
+            wx.CallAfter(self.frame.show_error, msg)
+            return
+
         path = self.selectScreenshot.GetPath()
         marker_color = self.colorPickerCtrl.GetColour().Get()
         self.progress = wx.ProgressDialog("In Progress", message="Analyzing screenshot...")
-        wx.lib.delayedresult.startWorker(self.on_extract_done, workerFn=analyze, ckwargs=dict(path=path), wargs=[self, path, marker_color])
+        wx.lib.delayedresult.startWorker(self.on_extract_done, workerFn=analyze, ckwargs=dict(path=path), wargs=[self, path, marker_color, v_int])
 
     def set_extract_result(self, extract_result, path):
         self.extract_result = extract_result
@@ -929,13 +957,14 @@ class MainWindow(wx.Frame):
         about = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
         self.Bind(wx.EVT_MENU, self.on_about, about)
 
-        reload_config = filemenu.Append(wx.ID_ANY, "&Reload config"," Reload all configuration")
-        self.Bind(wx.EVT_MENU, self.reload_config, reload_config)
+        create_instrument = filemenu.Append(wx.ID_ANY, "&Add Instrument"," Add instrument configuration")
+        self.Bind(wx.EVT_MENU, self.on_create_instrument, create_instrument)
 
         open_config = filemenu.Append(wx.ID_ANY, "&Open Config Dir"," Open configuartion directory")
         self.Bind(wx.EVT_MENU, self.on_open_config, open_config)
-        create_instrument = filemenu.Append(wx.ID_ANY, "&Add Instrument"," Add instrument configuration")
-        self.Bind(wx.EVT_MENU, self.on_create_instrument, create_instrument)
+
+        reload_config = filemenu.Append(wx.ID_ANY, "&Reload config"," Reload all configuration")
+        self.Bind(wx.EVT_MENU, self.reload_config, reload_config)
 
         exitMenutItem = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
         self.Bind(wx.EVT_MENU, self.on_exit, exitMenutItem)
@@ -1046,7 +1075,6 @@ def matches_name(window, name_pattern):
     else:
         for pattern in name_patterns:
             if name.find(pattern) > -1:
-            # if re.search(pattern, name):
                 return True
         return False
 
