@@ -5,6 +5,7 @@ dist
 build
 Output
 datadir
+download
 certs
 instruments/*.png
 instruments/*.xcf
