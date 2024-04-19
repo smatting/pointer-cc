@@ -1399,7 +1399,7 @@ class UpdateCheck(threading.Thread):
                pass
 
 def main():
-    app = wx.App(False)
+    app = wx.App(True)
     polling = None
     dispatcher = None
     update_check = None
