@@ -141,7 +141,7 @@ m = 1.0
 
 - `control.c1.speed` (optional): This parameter defines the speed specifically for the control element. It is recommended not to set this parameter unless you have a specific reason to do so. Instead, it is preferable to establish consistent base speeds for all knobs by setting `default.drag.speed` and `default.wheel.speed`. Use `control.c1.m` to adjust the relative speed of individual controls based on this standardized base speed. This approach ensures uniform behavior across controls and simplifies configuration management.
 
-- `default.type` the default type of pointer control used by all controls if not explicitely `type` is defined. Valid values are `drag`, `wheel`, `click` (see below)
+- `default.type` the default type of pointer control used by all controls if not explicitely `type` is defined. Valid values are `drag`, `wheel`, `click` (see above)
 
 - `default.drag.speed` default setting for`speed` for controls that are of type `drag`
 
