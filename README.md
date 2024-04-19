@@ -68,7 +68,9 @@ The `command` field determines what happens when you adust the midi controller.
 
 - `pan-y-inv` pan the cursor vertically. A CC value `127` pans the pointer all the way up
 
-- `adjust-control` adjust the control. What mouse pointer action is simulated depends on the current control element being hovered. See instrument configuration below. This command makes the associated kno the "adjustment knob".
+- `adjust-control` adjust the current control. What mouse pointer action is simulated depends on the configuration of current control element (See instrument configuration below)
+
+- `freewheel` start freewheeling. While freewheeling you can turn the adjustment knob (knob mapped to `adjust-control`) in one direction without it having any effect. When you turn the adjustment knob in the other direction freewheeling stops and the adjustment knob has its effect again.
 
 The `[midi]` section is automatically updated when you change the MIDI settings in the window, there is no need to edit this part manually.
 
