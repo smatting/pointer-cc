@@ -148,3 +148,6 @@ If no `type` is specified for a control element (`c1`), the default type specifi
 - `default.wheel.time_resolution`: This setting determines the maximum frequency (in times per second) at which wheel events are sent to the instrument window. If set too high, particularly on Windows systems, rapid adjustment knob turns may cause the operating system to drop wheel events. Conversely, setting it too low can result in overly choppy updates. I recommend experimenting with this value to find an optimal balance. A starting point of `50` times per second often works well to achieve smooth and responsive control.
 
 - `dimensions.width` and `dimensions.height`. Defines the dimensions of the whole instruments. All `x` and `y` coordinates of control elements relative to it. This is the resolution of the screenshot image.
+
+# Acknowledgements
+The original idea for this project came from a video by the Woody Piano Shack YouTube channel titled [I Fixed The Major Problem With All Software Synths](https://www.youtube.com/watch?v=BPoutltNV_E).
