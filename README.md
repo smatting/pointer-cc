@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="460" src="./resources/logo-big.png">
+  <img width="246" src="./docs/logo.gif">
 </p>
 
 ## Installation
