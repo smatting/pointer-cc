@@ -715,8 +715,9 @@ class InstrumentController:
         return c
 
 class AddInstrumentDialog(wx.Dialog):
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, queue):
         wx.Frame.__init__(self, parent, title=title)
+        self.queue = queue
        
         self.extract_result = None
         topbottommargin = 25
@@ -804,7 +805,7 @@ class AddInstrumentDialog(wx.Dialog):
             "mouse drag up and down",
             "mouse wheel"
         ]
-        self.mousectrl_combo = wx.ComboBox(self, id=wx.ID_ANY, choices=choices, style=wx.CB_READONLY)
+        self.mousectrl_combo = wx.ComboBox(self, id=wx.ID_ANY, value="mouse wheel", choices=choices, style=wx.CB_READONLY)
         sizer.Add(self.mousectrl_combo, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, border=horizontal_margin)
 
         sizer.AddSpacer(intermargin)
@@ -882,7 +883,7 @@ class AddInstrumentDialog(wx.Dialog):
             problems.append('Instrument file is not chosen in the configuration directory')
 
         if not re.match('^inst-(.*)\.txt$', os.path.basename(path)):
-            problems.append('Instrument file is not named in format inst-changeme.txt')
+            problems.append('Instrument file is not named in format inst-{name}.txt . It must start with "inst-" and end in ".txt".')
 
         if self.extract_result is None:
             problems.append('Screenshot analysis is missing')
@@ -1028,7 +1029,7 @@ class MainWindow(wx.Frame):
         open_directory(datadir())
 
     def on_create_instrument(self, event):
-        w = AddInstrumentDialog(None, "Create Instrument")
+        w = AddInstrumentDialog(None, "Create Instrument", self.queue)
         w.ShowModal()
 
     def on_close(self, event):
