@@ -876,6 +876,8 @@ class AddInstrumentDialog(wx.Dialog):
         with open(path, 'w') as f:
             f.write(doc.as_string())
 
+        self.queue.put((InternalCommand.RELOAD_ALL_CONFIGS, None))
+
         message = f'"{os.path.basename(path)}" was successfully saved to the configuration directory.\nTo further adjust it you need to open it with a text editor.\nPlease read the documentation on the details of the instrument configuration file. Please "Reload Config" in the menu after you\'ve changed config files to take effect.'
         dlg = wx.MessageDialog(None, message, f'Instrument successfully saved', wx.OK | wx.CANCEL)
         dlg.SetOKLabel("Open configuration directory")
