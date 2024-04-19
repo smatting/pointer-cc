@@ -113,7 +113,7 @@ m = 1.0
 
 - `window.contains` is used by pointer-cc to find the instrument window. Pick a string here that is contained in the window title of the instrument. It's usually the name of the instrument. Note that the case has to also match (comparison is case-sensitive).
 
-- `controls` The `controls.c1`, `controls.c2`, ... sections correspond to the control elements that you marked in the screenshots. You can see the `c?` number that belongs to acontrol element in the pointer-cc window when you select .
+- `controls` The `controls.c1`, `controls.c2`, ... sections correspond to the control elements that you marked in the screenshots. You can see the `c?` number that belongs to acontrol element in the pointer-cc window when you select it via the panning knobs.
 
 - `controls.c1.x`: x coordinate of the control element (was extracted from screenshot)
 
