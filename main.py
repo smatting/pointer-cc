@@ -1383,6 +1383,8 @@ class UpdateCheck(threading.Thread):
             time.sleep(0.5)
 
     def check_latest_bigger_version(self):
+        if version == "0.0.0":
+            return
         latest_version = None
         try:
             r = requests.get(url_latest)
