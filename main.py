@@ -195,6 +195,10 @@ class Instrument:
 
             return Instrument(pattern, box, controls)
 
+        except tomlkit.exceptions.TOMLKitError as tk:
+            msg = f'Not a valid TOML file: {tk}'
+            raise ConfigError(msg + f" in \"{instrument_context}\"")
+
         except ConfigError as ce:
             raise ConfigError(ce.msg + f" in \"{instrument_context}\"")
 
@@ -349,11 +353,12 @@ class Dispatcher(threading.Thread):
     def reload_all_configs(self):
         try:
             config = load_config()
-            instruments = load_instruments()
         except ConfigError as e:
             msg = f'Configuration error: {e}'
             wx.CallAfter(self.frame.show_error, msg)
         else:
+            instruments, inst_exceptions = load_instruments()
+
             self.config = config
             self.set_instruments(instruments)
 
@@ -365,6 +370,13 @@ class Dispatcher(threading.Thread):
 
             self.stop_window_polling()
             self.start_window_polling()
+
+            if len(inst_exceptions) > 0:
+                msgs = []
+                for e in inst_exceptions:
+                    msgs.append(str(e))
+                msg = 'Configuration error: ' + ' '.join(msgs)
+                wx.CallAfter(self.frame.show_error, msg)
 
     def get_active_controller(self):
         if len(self.controllers) == 0:
@@ -1283,11 +1295,16 @@ def load_instruments():
     root_dir = datadir()
     filenames = glob.glob('inst-*.txt', root_dir=root_dir)
     d = {}
+    exceptions = []
     for filename in filenames:
         p = os.path.join(root_dir, filename)
-        inst = Instrument.load(p, filename)
-        d[inst.pattern] = inst
-    return d
+        try:
+            inst = Instrument.load(p, filename)
+        except ConfigError as e:
+            exceptions.append(e)
+        else:
+            d[inst.pattern] = inst
+    return d, exceptions
 
 def load_config():
     return Config.load(userfile('config.txt'))
