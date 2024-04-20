@@ -30,6 +30,7 @@ pyinstaller-hooks-contrib==2024.4
 pyobjc-core==10.2; sys_platform == "darwin"
 pyobjc-framework-Cocoa==10.2; sys_platform == "darwin"
 pyobjc-framework-Quartz==10.2; sys_platform == "darwin"
+pyperclip==1.8.2
 PyRect==0.2.0
 python-rtmidi==1.5.8
 pywin32==306; sys_platform == "win32"

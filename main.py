@@ -9,6 +9,7 @@ import http.client
 import urllib
 import semver
 import textwrap
+import pyperclip
 import traceback
 import os
 import time
@@ -41,6 +42,7 @@ else:
 app_name = "pointer-cc"
 app_author = "smatting"
 app_url = "https://github.com/smatting/pointer-cc/"
+app_email = "pointer-cc@posteo.com"
 url_latest = "https://raw.githubusercontent.com/smatting/pointer-cc/main/latest_release.txt"
 
 InternalCommand = Enum('InternalCommand', ['QUIT', 'CHANGE_MIDI_PORT',  'CHANGE_MIDI_CHANNEL', 'UPDATE_WINDOW', 'RELOAD_ALL_CONFIGS'])
@@ -918,6 +920,54 @@ class AddInstrumentDialog(wx.Dialog):
 
         self.EndModal(0)
 
+class AboutWindow(wx.Frame):
+    def __init__(self, parent):
+        super(AboutWindow, self).__init__(parent)
+        msg = f'pointer-cc, Version {version}\nby Stefan Matting\nPlease send feedback to pointer-cc@posteo.com or the github site.'
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        margin_outside = 20
+
+        sizer.AddSpacer(40)
+
+        self.version_label = wx.StaticText(self, label=msg, style=wx.ALIGN_CENTRE_HORIZONTAL)
+        sizer.Add(self.version_label, 0, wx.LEFT | wx.RIGHT, margin_outside)
+
+        sizer.AddSpacer(10)
+
+        self.go_website = wx.Button(self, label='Go to website')
+        self.go_website.Bind(wx.EVT_BUTTON, self.on_go_website)
+        sizer.Add(self.go_website, 0, wx.LEFT | wx.RIGHT, margin_outside)
+
+        sizer.AddSpacer(10)
+
+        self.copy_email = wx.Button(self, label='Copy email address to clipboard')
+        self.copy_email.Bind(wx.EVT_BUTTON, self.on_copy_email)
+        sizer.Add(self.copy_email, 0, wx.LEFT | wx.RIGHT, margin_outside)
+
+        sizer.AddSpacer(10)
+
+        self.close_button = wx.Button(self, label='Close window')
+        self.close_button.Bind(wx.EVT_BUTTON, self.on_close)
+        sizer.Add(self.close_button, 0, wx.LEFT | wx.RIGHT, margin_outside)
+
+        sizer.AddSpacer(40)
+
+        self.SetSizer(sizer)
+        sizer.SetMinSize((300, 0))
+        sizer.Fit(self)
+    
+    def on_go_website(self, event):
+        webbrowser.open(app_url)
+
+    def on_copy_email(self, event):
+        pyperclip.copy(app_email)
+
+    def on_close(self, event):
+        self.Destroy()
+
+
 class MainWindow(wx.Frame):
     def __init__(self, parent, title, q, ports):
         wx.Frame.__init__(self, parent, title=title)
@@ -954,6 +1004,7 @@ class MainWindow(wx.Frame):
         # self.midi_msg_text = wx.StaticText(self.panel, label="<no MIDI received yet>", style=wx.ALIGN_CENTER)
 
         filemenu= wx.Menu()
+
 
         about = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
         self.Bind(wx.EVT_MENU, self.on_about, about)
@@ -1018,9 +1069,8 @@ class MainWindow(wx.Frame):
         webbrowser.open(app_url)
 
     def on_about(self, event):
-        msg = f'poiter-cc, Version {version}\nby Stefan Matting\nPlease send feedback to pointer-cc@posteo.com or the github site.'
-        dlg = wx.MessageDialog(None, msg, 'About', wx.OK | wx.ICON_INFORMATION)
-        dlg.ShowModal()
+        about_window = AboutWindow(self)
+        about_window.Show()
 
     def reload_config(self, event):
         self.queue.put((InternalCommand.RELOAD_ALL_CONFIGS, None))
