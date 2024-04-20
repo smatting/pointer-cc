@@ -2,9 +2,11 @@
   <img width="246" src="./docs/logo.gif">
 </p>
 
-Pointer-cc is an app that enables you to use your MIDI controller to control software instruments. However, instead of directly mapping physical knobs and sliders to specific instrument controls, pointer-cc operates by controlling the mouse pointer. This enabled you to control all the parameters of your virtual instruments by using only 4 physical knobs.
+Pointer-cc is an app that enables you to control all the (visibile) parameters of your software instrument using just 4 kobs or sliders of your MIDI controller. Pointer-cc does this by simulating the mouse pointer inside the instrument's video.
 
-See the introduction video:
+See demo here:
+
+[<img src="docs/video-snapshot.png">](https://www.github.com/)
 
 ## Installation
 
