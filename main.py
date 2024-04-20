@@ -1,7 +1,6 @@
 from PIL import Image
 import wx
 import wx.lib.delayedresult
-import wx.lib.hyperlink as hl
 import requests
 import time
 import importlib.resources
