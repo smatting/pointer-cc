@@ -33,5 +33,5 @@ First release:
 - [x] fix bug: app doesn't close
 - [x] new icon
 - [x] new version available check
-- [ ] write documentation
-- [ ] create video
+- [x] write documentation
+- [x] create video
