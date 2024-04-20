@@ -2,7 +2,7 @@
   <img width="246" src="./docs/logo.gif">
 </p>
 
-Pointer-cc is an app that enables you to control all the (visibile) parameters of your software instrument using just 4 kobs or sliders of your MIDI controller. Pointer-cc does this by simulating the mouse pointer inside the instrument's video.
+Pointer-cc is an app that enables you to control all the control elemtns of your software instrument using just 4 kobs or sliders of your MIDI controller. Pointer-cc does this by simulating the mouse pointer inside the instrument's window.
 
 NOTE: The app is in early development and may contain a lot of bugs. Please help me improving the software by submitting error repors or feedback as a Github issue or send to [pointer-cc@posteo.com](mailto:pointer-cc@posteo.com).
 
@@ -12,7 +12,7 @@ See Demo here:
 
 ## Installation
 
-You can download pointer-cc for both Mac and Windows from the [releases page](https://github.com/smatting/pointer-cc/releases). If you have a newer Mac with an M chip, download the `.dmg` file that ends with `-arm64`. Otherwise, download the `.dmg` file that ends with `-x86_x64`. You can verify your Mac type under `About This Mac` in the Apple menu.
+You can download pointer-cc for both Mac and Windows from the [releases page](https://github.com/smatting/pointer-cc/releases). If you have a newer Mac with an M? chip, download the `.dmg` file that ends with `-arm64`. Otherwise, download the `.dmg` file that ends with `-x86_x64`. You can verify your Mac type under `About This Mac` in the Apple menu.
 
 
 When running the Windows installer, you may encounter a warning about the installer coming from an "Unknown Publisher." This is because I (the author) have not bought a verified certificate, which requires an annual fee of 300 EUR. Optionally, you can add the [StefanMattingCA.cer](https://raw.githubusercontent.com/smatting/pointer-cc/main/certs/StefanMattingCA.cer) certificate to your trusted root certificates to remove this warning.
