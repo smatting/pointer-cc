@@ -6,7 +6,7 @@ Pointer-cc is an app that enables you to control all the (visibile) parameters o
 
 See demo here:
 
-[<img src="docs/video-snapshot.png">](https://www.github.com/)
+[<img src="docs/video-snapshot.png">](https://youtu.be/hVVDJ-jgU80)
 
 ## Installation
 

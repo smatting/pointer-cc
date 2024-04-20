@@ -1,6 +1,7 @@
 from PIL import Image
 import wx
 import wx.lib.delayedresult
+import wx.lib.hyperlink as hl
 import requests
 import time
 import importlib.resources
@@ -1018,7 +1019,7 @@ class MainWindow(wx.Frame):
         webbrowser.open(app_url)
 
     def on_about(self, event):
-        msg = f'poiter-cc, Version {version}\nby Stefan Matting\n{app_url}'
+        msg = f'poiter-cc, Version {version}\nby Stefan Matting\nPlease send feedback to pointer-cc@posteo.com or the github site.'
         dlg = wx.MessageDialog(None, msg, 'About', wx.OK | wx.ICON_INFORMATION)
         dlg.ShowModal()
 

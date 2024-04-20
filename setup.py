@@ -15,7 +15,7 @@ setup(
     version='0.0.0',
     description='Control your mouse via MIDI controler to control your software instruments',
     author='Stefan Matting',
-    author_email='stefan.matting@gmail.com',
+    author_email='pointer-cc@posteo.com',
     packages=find_packages(),
     cmdclass={
         'put_version': PutVersion,
