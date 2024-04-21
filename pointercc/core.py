@@ -30,7 +30,7 @@ class Box:
         return x_inside and y_inside
 
 def make_box(x, y, width, height):
-    return box(x, x + width, y, y + height)
+    return Box(x, x + width, y, y + height)
 
 class Window:
     def __init__(self, pattern, name, box):
