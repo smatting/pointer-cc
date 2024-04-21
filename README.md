@@ -16,7 +16,7 @@ Some features of pointer-cc:
 - Supports software instruments that react to "mouse wheel" AND to "dragging up and down"
 - Allows controlling many software instruments at the same time: pointer-cc detects the instrument window the pointer is inside and switches configurations dynamically
 - No setup in the DAW / Host-application required: pointer-cc only talks to the OS
-- Currently only works when the control elements are at static positions, i.e. doesn't support menus or paged interfaces 
+- Currently only supports software instruments with control elements at static positions, i.e. doesn't support menus or paged/tabbed interfaces 
 
 ## Installation / Download
 
