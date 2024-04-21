@@ -4,7 +4,7 @@
 contains = "TAL-J-8"
 
 [default]
-type = "drag"
+type = "wheel"
 
 [default.drag]
 speed = 1.0
