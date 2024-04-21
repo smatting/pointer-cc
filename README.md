@@ -13,7 +13,7 @@ See Demo here:
 Some features of pointer-cc:
 
 - Detects the geometry of the software instruments, i.e. you can resize and move the instruments window around
-- Supports sofwtare instruments that react to "mouse wheel" AND to "dragging up and down"
+- Supports software instruments that react to "mouse wheel" AND to "dragging up and down"
 - Allows controlling many software instruments at the same time: pointer-cc detects the instrument window the pointer is inside and switches configurations dynamically
 - No setup in the DAW / Host-application required: pointer-cc only talks to the OS
 - Currently only works when the control elements are at static positions, i.e. doesn't support menus or paged interfaces 
